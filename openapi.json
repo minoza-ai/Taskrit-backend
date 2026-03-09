@@ -1,0 +1,758 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Taskrit API",
+    "description": "Taskrit Backend REST API — Web3 통합 태스크 관리 서비스",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.taskr.it",
+      "description": "Production"
+    },
+    {
+      "url": "http://localhost:3000",
+      "description": "Local Development"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT access token. `Authorization: Bearer <token>`"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message",
+            "example": "Unauthorized"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "SignupRequest": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "사용자 ID (소문자, 고유값)",
+            "example": "johndoe"
+          },
+          "nickname": {
+            "type": "string",
+            "description": "표시 이름",
+            "example": "John Doe"
+          },
+          "password": {
+            "type": "string",
+            "description": "비밀번호",
+            "example": "Password@123"
+          },
+          "wallet_address": {
+            "type": "string",
+            "description": "이더리움 지갑 주소 (선택)",
+            "example": "0xAbCd1234567890abcdef1234567890abcdef1234"
+          }
+        },
+        "required": [
+          "user_id",
+          "nickname",
+          "password"
+        ]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "example": "johndoe"
+          },
+          "password": {
+            "type": "string",
+            "example": "Password@123"
+          }
+        },
+        "required": [
+          "user_id",
+          "password"
+        ]
+      },
+      "TokenResponse": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "description": "JWT access token (1시간 유효)"
+          },
+          "refresh_token": {
+            "type": "string",
+            "description": "JWT refresh token (14일 유효)"
+          },
+          "expires_in": {
+            "type": "integer",
+            "description": "Access token 만료 시간 (초)",
+            "example": 3600
+          }
+        },
+        "required": [
+          "access_token",
+          "refresh_token",
+          "expires_in"
+        ]
+      },
+      "UserProfile": {
+        "type": "object",
+        "properties": {
+          "user_uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "사용자 고유 UUID"
+          },
+          "user_id": {
+            "type": "string",
+            "description": "사용자 ID"
+          },
+          "nickname": {
+            "type": "string",
+            "description": "표시 이름"
+          },
+          "wallet_address": {
+            "type": "string",
+            "nullable": true,
+            "description": "연동된 지갑 주소"
+          },
+          "created_at": {
+            "type": "integer",
+            "description": "계정 생성 Unix timestamp"
+          }
+        }
+      },
+      "UpdateUserRequest": {
+        "type": "object",
+        "properties": {
+          "nickname": {
+            "type": "string",
+            "description": "새 표시 이름"
+          },
+          "password": {
+            "type": "string",
+            "description": "새 비밀번호"
+          }
+        }
+      },
+      "WalletAddressRequest": {
+        "type": "object",
+        "properties": {
+          "wallet_address": {
+            "type": "string",
+            "description": "이더리움 지갑 주소",
+            "example": "0xAbCd1234567890abcdef1234567890abcdef1234"
+          }
+        },
+        "required": [
+          "wallet_address"
+        ]
+      },
+      "WalletConfirmRequest": {
+        "type": "object",
+        "properties": {
+          "wallet_address": {
+            "type": "string",
+            "description": "이더리움 지갑 주소",
+            "example": "0xAbCd1234567890abcdef1234567890abcdef1234"
+          },
+          "signature": {
+            "type": "string",
+            "description": "Nonce에 대한 EIP-191 서명"
+          },
+          "nonce": {
+            "type": "string",
+            "description": "/wallets/connect/request에서 발급받은 Nonce"
+          }
+        },
+        "required": [
+          "wallet_address",
+          "signature",
+          "nonce"
+        ]
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "API 서버 실행 상태를 확인합니다.",
+        "operationId": "healthCheck",
+        "tags": [
+          "Health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Server is running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/register": {
+      "post": {
+        "summary": "회원가입",
+        "description": "새로운 사용자 계정을 생성합니다.",
+        "operationId": "register",
+        "tags": [
+          "User"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "User created successfully"
+                    },
+                    "user_uuid": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "필수 필드 누락",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "이미 사용중인 user_id 또는 wallet_address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/login": {
+      "post": {
+        "summary": "로그인",
+        "description": "user_id와 비밀번호로 로그인합니다. 15분 내 5회 실패 시 10분간 잠금됩니다.",
+        "operationId": "login",
+        "tags": [
+          "User"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "필수 필드 누락",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "잘못된 인증 정보",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "로그인 시도 횟수 초과",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Too many login attempts. Please try again later."
+                    },
+                    "lockedUntil": {
+                      "type": "integer",
+                      "description": "잠금 해제 Unix timestamp"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/refresh": {
+      "post": {
+        "summary": "토큰 갱신",
+        "description": "Refresh token으로 새 access token과 refresh token을 발급받습니다.",
+        "operationId": "refreshToken",
+        "tags": [
+          "User"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "refresh_token": {
+                    "type": "string",
+                    "description": "JWT refresh token"
+                  }
+                },
+                "required": [
+                  "refresh_token"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token refreshed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "refresh_token 누락",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "유효하지 않거나 만료된 refresh token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/me": {
+      "get": {
+        "summary": "내 정보 조회",
+        "description": "현재 로그인된 사용자의 프로필을 반환합니다.",
+        "operationId": "getMe",
+        "tags": [
+          "User"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "내 정보 수정",
+        "description": "닉네임 또는 비밀번호를 수정합니다.",
+        "operationId": "updateMe",
+        "tags": [
+          "User"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "User updated successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "수정할 필드 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "회원 탈퇴",
+        "description": "계정을 소프트 딜리트합니다. 삭제된 계정은 복구되지 않습니다.",
+        "operationId": "deleteMe",
+        "tags": [
+          "User"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "User account deleted successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "이미 탈퇴된 계정",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/wallets/connect/request": {
+      "post": {
+        "summary": "지갑 연동 요청 (Nonce 발급)",
+        "description": "지갑 서명 검증에 사용할 Nonce를 발급합니다. Nonce는 15분간 유효합니다.",
+        "operationId": "walletConnectRequest",
+        "tags": [
+          "Wallet"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WalletAddressRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Nonce issued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "nonce": {
+                      "type": "string",
+                      "description": "서명할 32바이트 hex Nonce"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Sign this message to verify wallet ownership"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "wallet_address 누락",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "유효하지 않은 지갑 주소",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/wallets/connect/confirm": {
+      "post": {
+        "summary": "지갑 연동 완료 (Signature 검증)",
+        "description": "EIP-191 서명을 검증하고 지갑을 계정에 연동합니다.",
+        "operationId": "walletConnectConfirm",
+        "tags": [
+          "Wallet"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WalletConfirmRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Wallet connected successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Wallet connected successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "필드 누락 또는 유효하지 않은 Nonce",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized 또는 서명 검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "이미 다른 계정에 연동된 지갑",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "유효하지 않은 지갑 주소",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/wallets": {
+      "delete": {
+        "summary": "지갑 연동 해제",
+        "description": "현재 계정에 연동된 지갑을 해제합니다.",
+        "operationId": "walletDisconnect",
+        "tags": [
+          "Wallet"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Wallet disconnected successfully"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
