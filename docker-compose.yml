@@ -23,7 +23,7 @@ services:
       start_period: 5s
 
   mongodb:
-    image: mongo:7-alpine
+    image: mongo:8.2.5
     container_name: taskrit-mongodb
     ports:
       - "27017:27017"
