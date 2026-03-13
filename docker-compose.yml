@@ -1,8 +1,6 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: d3vle0/taskrit-backend:latest
     container_name: taskrit-backend
     ports:
       - "3000:3000"
