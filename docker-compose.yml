@@ -9,7 +9,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      MONGODB_URI: mongodb://mongodb:27017/taskrit
+      MONGODB_USER: ${MONGO_USERNAME:-admin}
+      MONGODB_PASSWORD: ${MONGO_PASSWORD:-password}
+      MONGODB_URI: mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-password}@mongodb:27017/taskrit?authSource=admin
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
     depends_on:
       mongodb:
