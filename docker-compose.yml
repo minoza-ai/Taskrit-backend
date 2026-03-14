@@ -7,10 +7,11 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      MONGODB_USER: ${MONGO_USERNAME:-admin}
-      MONGODB_PASSWORD: ${MONGO_PASSWORD:-password}
-      MONGODB_URI: mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-password}@mongodb:27017/taskrit?authSource=admin
-      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+      MONGODB_USER: ${MONGODB_USER:-admin}
+      MONGODB_PASSWORD: ${MONGODB_PASSWORD:-change-me}
+      MONGODB_URI: mongodb://${MONGODB_USER:-admin}:${MONGODB_PASSWORD:-change-me}@mongodb:27017/taskrit?authSource=admin
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-me-access-secret}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh-secret}
     depends_on:
       mongodb:
         condition: service_healthy
@@ -31,8 +32,8 @@ services:
       - "27017:27017"
     environment:
       MONGO_INITDB_DATABASE: taskrit
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-admin}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-password}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:-change-me}
     volumes:
       - mongodb_data:/data/db
       - mongodb_config:/data/configdb
