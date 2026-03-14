@@ -13,6 +13,8 @@ env:
   IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/taskrit-backend
   CONTAINER_NAME: taskrit-backend
   CONTAINER_PORT: 3000
+  MONGO_CONTAINER_NAME: taskrit-mongodb
+  MONGO_VOLUME_NAME: taskrit-mongodb-data
 
 jobs:
   build-and-push:
@@ -52,14 +54,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          MONGO_URI="${{ secrets.MONGODB_URI }}"
-
-          if [ -z "${{ secrets.MONGODB_URI }}" ]; then
-            echo "::error::Missing required secret: MONGODB_URI"
+          if [ -z "${{ secrets.MONGODB_USER }}" ]; then
+            echo "::error::Missing required secret: MONGODB_USER"
             exit 1
           fi
-          if [[ "$MONGO_URI" == *"localhost"* ]] || [[ "$MONGO_URI" == *"127.0.0.1"* ]] || [[ "$MONGO_URI" == *"::1"* ]]; then
-            echo "::error::MONGODB_URI points to localhost. Use a host reachable from the backend container (e.g. mongodb service name, server IP, or managed DB endpoint)."
+          if [ -z "${{ secrets.MONGODB_PASSWORD }}" ]; then
+            echo "::error::Missing required secret: MONGODB_PASSWORD"
             exit 1
           fi
           if [ -z "${{ secrets.JWT_ACCESS_SECRET }}" ]; then
@@ -90,13 +90,38 @@ jobs:
             docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" -p "${{ secrets.GHCR_PAT }}"
             docker pull "${{ env.IMAGE_NAME }}:latest"
 
+            docker network create "taskrit-network" || true
+            docker volume create "${{ env.MONGO_VOLUME_NAME }}" || true
+
+            docker stop "${{ env.MONGO_CONTAINER_NAME }}" || true
+            docker rm "${{ env.MONGO_CONTAINER_NAME }}" || true
             docker stop "${{ env.CONTAINER_NAME }}" || true
             docker rm "${{ env.CONTAINER_NAME }}" || true
 
             docker run -d \
-              --name "${{ env.CONTAINER_NAME }}" \
+              --name "${{ env.MONGO_CONTAINER_NAME }}" \
+              --network "taskrit-network" \
               --restart unless-stopped \
-              -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
+              -e MONGO_INITDB_DATABASE=taskrit \
+              -e MONGO_INITDB_ROOT_USERNAME="${{ secrets.MONGODB_USER }}" \
+              -e MONGO_INITDB_ROOT_PASSWORD="${{ secrets.MONGODB_PASSWORD }}" \
+              -v "${{ env.MONGO_VOLUME_NAME }}:/data/db" \
+              --health-cmd='echo "db.runCommand(\"ping\").ok" | mongosh localhost:27017/test --quiet' \
+              --health-interval=10s \
+              --health-timeout=5s \
+              --health-retries=10 \
+              mongo:8.2.5
+
+            until [ "$(docker inspect -f '{{.State.Health.Status}}' "${{ env.MONGO_CONTAINER_NAME }}")" = "healthy" ]; do
+              echo "Waiting for MongoDB to become healthy..."
+              sleep 3
+            done
+
+            docker run -d \
+              --name "${{ env.CONTAINER_NAME }}" \
+              --network "taskrit-network" \
+              --restart unless-stopped \
+              -e MONGODB_URI="mongodb://${{ secrets.MONGODB_USER }}:${{ secrets.MONGODB_PASSWORD }}@${{ env.MONGO_CONTAINER_NAME }}:27017/taskrit?authSource=admin" \
               -e JWT_ACCESS_SECRET="${{ secrets.JWT_ACCESS_SECRET }}" \
               -e JWT_REFRESH_SECRET="${{ secrets.JWT_REFRESH_SECRET }}" \
               -e NODE_ENV=production \
