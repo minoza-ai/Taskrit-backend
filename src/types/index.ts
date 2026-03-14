@@ -63,6 +63,40 @@ export interface WalletConnectRequest {
   nonce: string;
 }
 
+export interface Project {
+  project_uuid: string;
+  owner_user_uuid: string;
+  name: string;
+  category: string | null;
+  budget: number | null;
+  deadline: number | null;
+  team_requirements: string | null;
+  detailed_description: string | null;
+  created_at: number;
+  updated_at: number;
+  deleted_at: number | null;
+}
+
+export interface CreateProjectRequest {
+  name: string;
+  category?: string;
+  budget?: number;
+  deadline?: number;
+  team_requirements?: string;
+  detailed_description?: string;
+  description?: string;
+}
+
+export interface UpdateProjectRequest {
+  name?: string;
+  category?: string;
+  budget?: number;
+  deadline?: number;
+  team_requirements?: string;
+  detailed_description?: string;
+  description?: string;
+}
+
 export interface RequestWithUser extends Request {
   user?: JWTPayload;
 }
