@@ -47,7 +47,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 // 서버 시작
-async function startServer() {
+const startServer = async () => {
   try {
     // MongoDB에 연결
     await database.initialize();
@@ -62,7 +62,7 @@ async function startServer() {
     console.error('Failed to start server:', err);
     process.exit(1);
   }
-}
+};
 
 // Graceful shutdown
 process.on('SIGINT', async () => {

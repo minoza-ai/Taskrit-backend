@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const fallbackMongoUri = 'mongodb://localhost:27017/taskrit';
 
-function getMongoUri(): string {
+const getMongoUri = (): string => {
   const mongoUri = process.env.MONGODB_URI?.trim();
 
   if (mongoUri) {
@@ -14,7 +14,7 @@ function getMongoUri(): string {
   }
 
   throw new Error('MONGODB_URI is required when NODE_ENV is not development');
-}
+};
 
 export class Database {
   async initialize(): Promise<void> {
