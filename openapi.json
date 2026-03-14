@@ -183,6 +183,149 @@
           "signature",
           "nonce"
         ]
+      },
+      "Project": {
+        "type": "object",
+        "properties": {
+          "project_uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "프로젝트 고유 UUID"
+          },
+          "owner_user_uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "프로젝트 소유자 사용자 UUID"
+          },
+          "name": {
+            "type": "string",
+            "description": "프로젝트 이름",
+            "example": "Taskrit Backend"
+          },
+          "category": {
+            "type": "string",
+            "nullable": true,
+            "description": "프로젝트 카테고리",
+            "example": "Web Development"
+          },
+          "budget": {
+            "type": "number",
+            "nullable": true,
+            "description": "프로젝트 예산",
+            "example": 5000000
+          },
+          "deadline": {
+            "type": "integer",
+            "nullable": true,
+            "description": "마감일 Unix timestamp",
+            "example": 1767225600
+          },
+          "team_requirements": {
+            "type": "string",
+            "nullable": true,
+            "description": "팀 구성/역할 요구사항",
+            "example": "Frontend 1명, Backend 1명, Designer 1명"
+          },
+          "detailed_description": {
+            "type": "string",
+            "nullable": true,
+            "description": "등록자가 자유롭게 작성하는 상세 설명",
+            "example": "MVP 단계에서는 인증/결제 흐름을 우선 구현하고 4주 내 베타 배포를 목표로 합니다."
+          },
+          "created_at": {
+            "type": "integer",
+            "description": "프로젝트 생성 Unix timestamp"
+          },
+          "updated_at": {
+            "type": "integer",
+            "description": "프로젝트 수정 Unix timestamp"
+          },
+          "deleted_at": {
+            "type": "integer",
+            "nullable": true,
+            "description": "프로젝트 삭제 Unix timestamp"
+          }
+        },
+        "required": [
+          "project_uuid",
+          "owner_user_uuid",
+          "name",
+          "category",
+          "budget",
+          "deadline",
+          "team_requirements",
+          "detailed_description",
+          "created_at",
+          "updated_at",
+          "deleted_at"
+        ]
+      },
+      "CreateProjectRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "프로젝트 이름",
+            "example": "Taskrit Backend"
+          },
+          "category": {
+            "type": "string",
+            "description": "프로젝트 카테고리",
+            "example": "Web Development"
+          },
+          "budget": {
+            "type": "number",
+            "description": "프로젝트 예산",
+            "example": 5000000
+          },
+          "deadline": {
+            "type": "integer",
+            "description": "마감일 Unix timestamp",
+            "example": 1767225600
+          },
+          "team_requirements": {
+            "type": "string",
+            "description": "팀 구성/역할 요구사항",
+            "example": "Frontend 1명, Backend 1명, Designer 1명"
+          },
+          "detailed_description": {
+            "type": "string",
+            "description": "등록자가 자유롭게 작성하는 상세 설명",
+            "example": "MVP 단계에서는 인증/결제 흐름을 우선 구현하고 4주 내 베타 배포를 목표로 합니다."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateProjectRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "새 프로젝트 이름"
+          },
+          "category": {
+            "type": "string",
+            "description": "새 프로젝트 카테고리"
+          },
+          "budget": {
+            "type": "number",
+            "description": "새 프로젝트 예산"
+          },
+          "deadline": {
+            "type": "integer",
+            "description": "새 마감일 Unix timestamp"
+          },
+          "team_requirements": {
+            "type": "string",
+            "description": "새 팀 요구사항"
+          },
+          "detailed_description": {
+            "type": "string",
+            "description": "새 상세 설명"
+          }
+        }
       }
     }
   },
@@ -743,6 +886,318 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects": {
+      "post": {
+        "summary": "프로젝트 등록",
+        "description": "현재 로그인된 사용자에게 새 프로젝트를 등록합니다.",
+        "operationId": "createProject",
+        "tags": [
+          "Project"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Project created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Project created successfully"
+                    },
+                    "project": {
+                      "$ref": "#/components/schemas/Project"
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "project"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "name 누락 또는 잘못된 요청",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "프로젝트 목록 조회",
+        "description": "현재 로그인된 사용자의 프로젝트 목록을 조회합니다.",
+        "operationId": "listProjects",
+        "tags": [
+          "Project"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "projects": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Project"
+                      }
+                    }
+                  },
+                  "required": [
+                    "projects"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_uuid}": {
+      "get": {
+        "summary": "프로젝트 상세 조회",
+        "description": "현재 로그인된 사용자의 특정 프로젝트를 조회합니다.",
+        "operationId": "getProjectByUuid",
+        "tags": [
+          "Project"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "프로젝트 수정",
+        "description": "현재 로그인된 사용자의 프로젝트 이름/카테고리/예산/마감일/팀 요구사항/상세 설명을 수정합니다.",
+        "operationId": "updateProject",
+        "tags": [
+          "Project"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProjectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Project updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Project updated successfully"
+                    },
+                    "project": {
+                      "$ref": "#/components/schemas/Project"
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "project"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "수정할 필드 없음 또는 잘못된 값",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "프로젝트 삭제",
+        "description": "현재 로그인된 사용자의 프로젝트를 소프트 삭제합니다.",
+        "operationId": "deleteProject",
+        "tags": [
+          "Project"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Project deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
             "content": {
               "application/json": {
                 "schema": {

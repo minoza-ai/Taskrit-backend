@@ -11,6 +11,7 @@ import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import walletRoutes from './routes/wallets';
 import testRoutes from './routes/test';
+import projectRoutes from './routes/projects';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -29,6 +30,7 @@ app.get('/health', (req, res) => {
 app.use('/user', authRoutes);
 app.use('/user', userRoutes);
 app.use('/wallets', walletRoutes);
+app.use('/projects', projectRoutes);
 app.use('/test', testRoutes);
 
 // 404 핸들러
