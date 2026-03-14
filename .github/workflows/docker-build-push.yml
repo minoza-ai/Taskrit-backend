@@ -48,6 +48,23 @@ jobs:
     needs: build-and-push
 
     steps:
+      - name: Validate required secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${{ secrets.MONGODB_URI }}" ]; then
+            echo "::error::Missing required secret: MONGODB_URI"
+            exit 1
+          fi
+          if [ -z "${{ secrets.JWT_ACCESS_SECRET }}" ]; then
+            echo "::error::Missing required secret: JWT_ACCESS_SECRET"
+            exit 1
+          fi
+          if [ -z "${{ secrets.JWT_REFRESH_SECRET }}" ]; then
+            echo "::error::Missing required secret: JWT_REFRESH_SECRET"
+            exit 1
+          fi
+
       - name: Configure SSH key
         shell: bash
         run: |
@@ -74,7 +91,8 @@ jobs:
               --name "${{ env.CONTAINER_NAME }}" \
               --restart unless-stopped \
               -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
-              -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+              -e JWT_ACCESS_SECRET="${{ secrets.JWT_ACCESS_SECRET }}" \
+              -e JWT_REFRESH_SECRET="${{ secrets.JWT_REFRESH_SECRET }}" \
               -e NODE_ENV=production \
               -p "${{ secrets.SERVER_PORT }}:${{ env.CONTAINER_PORT }}" \
               "${{ env.IMAGE_NAME }}:latest"

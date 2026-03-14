@@ -1,11 +1,25 @@
 import mongoose from 'mongoose';
 
-const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/taskrit';
+const fallbackMongoUri = 'mongodb://localhost:27017/taskrit';
+
+function getMongoUri(): string {
+  const mongoUri = process.env.MONGODB_URI?.trim();
+
+  if (mongoUri) {
+    return mongoUri;
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    return fallbackMongoUri;
+  }
+
+  throw new Error('MONGODB_URI is required when NODE_ENV is not development');
+}
 
 export class Database {
   async initialize(): Promise<void> {
     try {
-      await mongoose.connect(mongoUri);
+      await mongoose.connect(getMongoUri());
       console.log('Connected to MongoDB successfully');
     } catch (err) {
       console.error('MongoDB connection error:', err);
