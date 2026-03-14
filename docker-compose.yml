@@ -1,8 +1,6 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: d3vle0/taskrit-backend:latest
     container_name: taskrit-backend
     ports:
       - "3000:3000"
@@ -27,7 +25,7 @@ services:
       start_period: 5s
 
   mongodb:
-    image: mongo:7-alpine
+    image: mongo:8.2.5
     container_name: taskrit-mongodb
     ports:
       - "27017:27017"
