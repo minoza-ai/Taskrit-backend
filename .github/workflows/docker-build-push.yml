@@ -52,8 +52,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          MONGO_URI="${{ secrets.MONGODB_URI }}"
+
           if [ -z "${{ secrets.MONGODB_URI }}" ]; then
             echo "::error::Missing required secret: MONGODB_URI"
+            exit 1
+          fi
+          if [[ "$MONGO_URI" == *"localhost"* ]] || [[ "$MONGO_URI" == *"127.0.0.1"* ]] || [[ "$MONGO_URI" == *"::1"* ]]; then
+            echo "::error::MONGODB_URI points to localhost. Use a host reachable from the backend container (e.g. mongodb service name, server IP, or managed DB endpoint)."
             exit 1
           fi
           if [ -z "${{ secrets.JWT_ACCESS_SECRET }}" ]; then
