@@ -176,6 +176,10 @@
           "nonce": {
             "type": "string",
             "description": "/wallets/connect/request에서 발급받은 Nonce"
+          },
+          "message": {
+            "type": "string",
+            "description": "지갑으로 실제 서명한 원문 메시지 (선택). 제공하면 해당 메시지로 우선 검증합니다."
           }
         },
         "required": [
@@ -754,7 +758,7 @@
                     },
                     "message": {
                       "type": "string",
-                      "example": "Sign this message to verify wallet ownership"
+                      "example": "Sign this message to verify wallet ownership\nNonce: <nonce>"
                     }
                   }
                 }

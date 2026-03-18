@@ -5,12 +5,12 @@ export const web3Util = {
    * EIP-191 규격의 메시지 서명 검증
    * @param message 서명할 메시지
    * @param signature 서명 데이터
-   * @returns 서명한 지갑 주소
+   * @returns 서명한 지갑 주소 (체크섬 형식)
    */
   verifySignature(message: string, signature: string): string | null {
     try {
       const recoveredAddress = ethers.verifyMessage(message, signature);
-      return recoveredAddress.toLowerCase();
+      return ethers.getAddress(recoveredAddress);
     } catch (err) {
       console.error('Signature verification failed:', err);
       return null;

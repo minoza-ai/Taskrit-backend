@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { walletController } from '../controllers/walletController';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth';
 
 const router = Router();
 
@@ -14,7 +14,7 @@ router.post('/connect/request', (req, res) => walletController.requestConnect(re
  * POST /wallets/connect/confirm
  * 지갑 연동 완료 (Signature 검증)
  */
-router.post('/connect/confirm', authMiddleware, (req, res) => walletController.confirmConnect(req, res));
+router.post('/connect/confirm', optionalAuthMiddleware, (req, res) => walletController.confirmConnect(req, res));
 
 /**
  * DELETE /wallets
