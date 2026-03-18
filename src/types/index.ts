@@ -61,6 +61,7 @@ export interface WalletConnectRequest {
   wallet_address: string;
   signature: string;
   nonce: string;
+  message?: string;
 }
 
 export interface Project {

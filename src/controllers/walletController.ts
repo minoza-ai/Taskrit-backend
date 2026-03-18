@@ -22,11 +22,19 @@ export class WalletController {
         return;
       }
 
-      const nonce = await nonceService.createNonce(wallet_address);
+      // Normalize address to checksum format for consistency
+      const normalizedAddress = web3Util.normalizeAddress(wallet_address);
+      if (!normalizedAddress) {
+        res.status(422).json({ error: 'Invalid wallet address' });
+        return;
+      }
+
+      const nonce = await nonceService.createNonce(normalizedAddress);
+      const message = `Sign this message to verify wallet ownership\nNonce: ${nonce.nonce}`;
 
       res.status(200).json({
         nonce: nonce.nonce,
-        message: 'Sign this message to verify wallet ownership',
+        message,
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Internal server error' });
@@ -39,11 +47,11 @@ export class WalletController {
   async confirmConnect(req: RequestWithUser, res: Response): Promise<void> {
     try {
       if (!req.user) {
-        res.status(401).json({ error: 'Unauthorized' });
+        res.status(401).json({ error: 'Login required. Include Authorization: Bearer <access_token>' });
         return;
       }
 
-      const { wallet_address, signature, nonce }: WalletConnectRequest = req.body;
+      const { wallet_address, signature, nonce, message }: WalletConnectRequest = req.body;
 
       if (!wallet_address || !signature || !nonce) {
         res.status(400).json({ error: 'Missing required fields: wallet_address, signature, nonce' });
@@ -55,8 +63,15 @@ export class WalletController {
         return;
       }
 
+      // Normalize address to checksum format for consistency
+      const normalizedRequestAddress = web3Util.normalizeAddress(wallet_address);
+      if (!normalizedRequestAddress) {
+        res.status(422).json({ error: 'Invalid wallet address' });
+        return;
+      }
+
       // Nonce 유효성 검증
-      const nonceRecord = await nonceService.verifyNonce(wallet_address, nonce);
+      const nonceRecord = await nonceService.verifyNonce(normalizedRequestAddress, nonce);
 
       if (!nonceRecord) {
         res.status(400).json({ error: 'Invalid or expired nonce' });
@@ -64,24 +79,50 @@ export class WalletController {
       }
 
       // Signature 검증
-      const recoveredAddress = web3Util.verifySignature(nonce, signature);
+      const messageCandidates = [
+        nonce,
+        `Sign this message to verify wallet ownership\nNonce: ${nonce}`,
+        `Sign this message to verify wallet ownership: ${nonce}`,
+      ];
+
+      if (message?.trim()) {
+        messageCandidates.unshift(message.trim());
+      }
+
+      let recoveredAddress: string | null = null;
+      for (const candidate of messageCandidates) {
+        recoveredAddress = web3Util.verifySignature(candidate, signature);
+        if (recoveredAddress) {
+          break;
+        }
+      }
 
       if (!recoveredAddress) {
-        res.status(401).json({ error: 'Signature verification failed' });
+        res.status(401).json({ error: 'Signature verification failed. Sign exact nonce/message from connect request.' });
         return;
       }
 
-      // 복구된 주소와 요청된 주소 일치 확인
-      const normalizedRequestAddress = web3Util.normalizeAddress(wallet_address);
-      const normalizedRecoveredAddress = web3Util.normalizeAddress(recoveredAddress);
+      // 복구된 주소와 요청된 주소 일치 확인 (both in checksum format)
+      console.log('Wallet address verification:', {
+        requested: wallet_address,
+        normalized_requested: normalizedRequestAddress,
+        recovered: recoveredAddress,
+        match: normalizedRequestAddress === recoveredAddress,
+      });
 
-      if (normalizedRequestAddress?.toLowerCase() !== normalizedRecoveredAddress?.toLowerCase()) {
-        res.status(401).json({ error: 'Signature does not match wallet address' });
+      if (normalizedRequestAddress !== recoveredAddress) {
+        res.status(401).json({
+          error: 'Signature does not match wallet address',
+          details: {
+            requested: normalizedRequestAddress,
+            recovered: recoveredAddress,
+          },
+        });
         return;
       }
 
-      // 지갑 주소 연결
-      await userService.connectWallet(req.user.user_uuid, wallet_address);
+      // 지갑 주소 연결 (이미 checksum format)
+      await userService.connectWallet(req.user.user_uuid, normalizedRequestAddress);
 
       // Nonce 삭제
       await nonceService.deleteNonce(nonce);
