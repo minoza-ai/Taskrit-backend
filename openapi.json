@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Taskrit API",
-    "description": "Taskrit Backend REST API — Web3 통합 태스크 관리 서비스",
+    "description": "Taskrit Backend REST API — Solana 통합 태스크 관리 서비스 (Devnet)",
     "version": "1.0.0"
   },
   "servers": [
@@ -58,8 +58,8 @@
           },
           "wallet_address": {
             "type": "string",
-            "description": "이더리움 지갑 주소 (선택)",
-            "example": "0xAbCd1234567890abcdef1234567890abcdef1234"
+            "description": "Solana 지갑 주소 (선택, base58 PublicKey)",
+            "example": "7kbnvuGBxxj8AG9qp8Scn56muWGaRaFqxg1FsRp3PaFT"
           }
         },
         "required": [
@@ -153,8 +153,8 @@
         "properties": {
           "wallet_address": {
             "type": "string",
-            "description": "이더리움 지갑 주소",
-            "example": "0xAbCd1234567890abcdef1234567890abcdef1234"
+            "description": "Solana 지갑 주소 (base58 PublicKey)",
+            "example": "7kbnvuGBxxj8AG9qp8Scn56muWGaRaFqxg1FsRp3PaFT"
           }
         },
         "required": [
@@ -166,16 +166,21 @@
         "properties": {
           "wallet_address": {
             "type": "string",
-            "description": "이더리움 지갑 주소",
-            "example": "0xAbCd1234567890abcdef1234567890abcdef1234"
+            "description": "Solana 지갑 주소 (base58 PublicKey)",
+            "example": "7kbnvuGBxxj8AG9qp8Scn56muWGaRaFqxg1FsRp3PaFT"
           },
           "signature": {
             "type": "string",
-            "description": "Nonce에 대한 EIP-191 서명"
+            "description": "Solana signMessage(Ed25519) 서명"
           },
           "nonce": {
             "type": "string",
             "description": "/wallets/connect/request에서 발급받은 Nonce"
+          },
+          "signature_encoding": {
+            "type": "string",
+            "description": "signature 인코딩 형식 (생략 시 base58/base64/hex 자동 시도)",
+            "enum": ["base58", "base64", "hex"]
           },
           "message": {
             "type": "string",
@@ -758,7 +763,7 @@
                     },
                     "message": {
                       "type": "string",
-                      "example": "Sign this message to verify wallet ownership\nNonce: <nonce>"
+                      "example": "Taskrit Wallet Verification\nNetwork: solana-devnet\nWallet: <wallet>\nNonce: <nonce>"
                     }
                   }
                 }
@@ -791,7 +796,7 @@
     "/wallets/connect/confirm": {
       "post": {
         "summary": "지갑 연동 완료 (Signature 검증)",
-        "description": "EIP-191 서명을 검증하고 지갑을 계정에 연동합니다.",
+        "description": "Solana signMessage(Ed25519) 서명을 검증하고 지갑을 계정에 연동합니다.",
         "operationId": "walletConnectConfirm",
         "tags": [
           "Wallet"

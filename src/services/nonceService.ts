@@ -13,7 +13,7 @@ export class NonceService {
     // 기존의 유효한 Nonce가 있으면 삭제
     const now = Math.floor(Date.now() / 1000);
     await Nonce.deleteMany({
-      wallet_address: wallet_address.toLowerCase(),
+      wallet_address,
       expires_at: { $gt: now },
     });
 
@@ -23,7 +23,7 @@ export class NonceService {
 
     const record = await Nonce.create({
       id: nonceId,
-      wallet_address: wallet_address.toLowerCase(),
+      wallet_address,
       nonce,
       created_at: now,
       expires_at: expiresAt,
@@ -45,7 +45,7 @@ export class NonceService {
     const now = Math.floor(Date.now() / 1000);
 
     const record = await Nonce.findOne({
-      wallet_address: wallet_address.toLowerCase(),
+      wallet_address,
       nonce,
       expires_at: { $gt: now },
     });
