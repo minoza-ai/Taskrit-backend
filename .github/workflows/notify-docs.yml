@@ -24,7 +24,9 @@ jobs:
               "client_payload": {
                 "repo": "${{ github.repository }}",
                 "ref": "${{ github.ref_name }}",
-                "sha": "${{ github.sha }}"
+                "sha": "${{ github.sha }}",
+                "spec_path": "openapi.json",
+                "target_path": "api-reference/openapi.json"
               }
             }')
 
