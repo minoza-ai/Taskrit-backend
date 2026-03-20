@@ -62,6 +62,7 @@ export interface WalletConnectRequest {
   signature: string;
   nonce: string;
   message?: string;
+  signature_encoding?: 'base58' | 'base64' | 'hex';
 }
 
 export interface Project {

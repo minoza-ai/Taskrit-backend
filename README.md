@@ -1,12 +1,12 @@
 # Taskrit Backend REST API
 
-TypeScript 기반 Node.js REST API. Web3 지갑 인증, JWT 기반 사용자 인증, bcrypt 비밀번호 암호화, Rate Limiting을 지원합니다.
+TypeScript 기반 Node.js REST API. Solana 지갑 인증(Devnet), JWT 기반 사용자 인증, bcrypt 비밀번호 암호화, Rate Limiting을 지원합니다.
 
 ## 주요 기능
 
 - **사용자 인증**: ID/비밀번호 기반 JWT 로그인
 - **사용자 관리**: 회원가입, 정보 조회/수정, 회원 탈퇴 (Soft Delete)
-- **Web3 지갑 연동**: EIP-191 서명 검증을 통한 안전한 지갑 연동
+- **Solana 지갑 연동**: Ed25519 `signMessage` 서명 검증을 통한 안전한 지갑 연동
 - **보안**:
   - 비밀번호: Client SHA-256 → Server bcrypt(12+)
   - JWT: Access Token (1시간), Refresh Token (14일)
@@ -92,7 +92,7 @@ Request Body:
   "user_id": "john_doe",
   "nickname": "John",
   "password": "hashed_password_from_client",
-  "wallet_address": "0x1234...abcd"
+  "wallet_address": "7kbnvuGBxxj8AG9qp8Scn56muWGaRaFqxg1FsRp3PaFT"
 }
 ```
 
@@ -159,7 +159,7 @@ Response (200 OK):
   "user_uuid": "550e8400-e29b-41d4-a716-446655440000",
   "user_id": "john_doe",
   "nickname": "John",
-  "wallet_address": "0x1234...abcd",
+  "wallet_address": "7kbnvuGBxxj8AG9qp8Scn56muWGaRaFqxg1FsRp3PaFT",
   "created_at": 1704067200
 }
 ```
@@ -231,7 +231,7 @@ Response (401 Unauthorized - 인증 실패):
 Request Body:
 ```json
 {
-  "wallet_address": "0x1234567890123456789012345678901234567890"
+  "wallet_address": "7kbnvuGBxxj8AG9qp8Scn56muWGaRaFqxg1FsRp3PaFT"
 }
 ```
 
@@ -239,7 +239,7 @@ Response (200 OK):
 ```json
 {
   "nonce": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
-  "message": "Sign this message to verify wallet ownership"
+  "message": "Taskrit Wallet Verification\nNetwork: solana-devnet\nWallet: 7kbnvuGBxxj8AG9qp8Scn56muWGaRaFqxg1FsRp3PaFT\nNonce: <nonce>"
 }
 ```
 
@@ -254,9 +254,10 @@ Authorization: Bearer {access_token}
 Request Body:
 ```json
 {
-  "wallet_address": "0x1234567890123456789012345678901234567890",
-  "signature": "0x...",
-  "nonce": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+  "wallet_address": "7kbnvuGBxxj8AG9qp8Scn56muWGaRaFqxg1FsRp3PaFT",
+  "signature": "5J6N2hK1R2...base58-signature...",
+  "nonce": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+  "signature_encoding": "base58"
 }
 ```
 
@@ -337,7 +338,7 @@ src/
 ├── utils/
 │   ├── jwt.ts               # JWT 유틸
 │   ├── password.ts          # bcrypt 유틸
-│   ├── web3.ts              # Web3 서명 검증
+│   ├── solana.ts            # Solana 서명 검증
 │   └── rateLimit.ts         # Rate Limiting
 └── types/
     └── index.ts             # TypeScript 타입 정의
@@ -364,6 +365,9 @@ MONGODB_URI=mongodb://localhost:27017/taskrit
 RATE_LIMIT_WINDOW_MS=900000        # 15분
 RATE_LIMIT_MAX_REQUESTS=5          # 최대 시도 5회
 RATE_LIMIT_LOCK_TIME=600000        # 10분 잠금
+
+# Solana 설정
+SOLANA_CLUSTER=devnet
 ```
 
 ## 보안 사항
@@ -377,10 +381,10 @@ RATE_LIMIT_LOCK_TIME=600000        # 10분 잠금
    - Refresh Token: 14일 유효
    - Bearer 토큰 방식 사용
 
-3. **Web3 지갑 인증**
-   - EIP-191 규격 서명 검증
+3. **Solana 지갑 인증**
+  - Ed25519 signMessage 서명 검증
    - Nonce 기반 replay attack 방지
-   - 서명 검증 후 지갑 주소 정규화
+  - Solana 주소(PublicKey base58) 정규화
 
 4. **Rate Limiting**
    - 로그인 시도 5회 실패 시 10분 계정 잠금

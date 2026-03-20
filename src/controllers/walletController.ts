@@ -2,7 +2,9 @@ import { Response } from 'express';
 import { RequestWithUser, WalletConnectRequest } from '../types';
 import { userService } from '../services/userService';
 import { nonceService } from '../services/nonceService';
-import { web3Util } from '../utils/web3';
+import { solanaUtil } from '../utils/solana';
+
+const toHex = (value: string): string => Buffer.from(value, 'utf8').toString('hex');
 
 export class WalletController {
   /**
@@ -17,20 +19,24 @@ export class WalletController {
         return;
       }
 
-      if (!web3Util.isValidAddress(wallet_address)) {
+      if (!solanaUtil.isValidAddress(wallet_address)) {
         res.status(422).json({ error: 'Invalid wallet address' });
         return;
       }
 
-      // Normalize address to checksum format for consistency
-      const normalizedAddress = web3Util.normalizeAddress(wallet_address);
+      const normalizedAddress = solanaUtil.normalizeAddress(wallet_address);
       if (!normalizedAddress) {
         res.status(422).json({ error: 'Invalid wallet address' });
         return;
       }
 
       const nonce = await nonceService.createNonce(normalizedAddress);
-      const message = `Sign this message to verify wallet ownership\nNonce: ${nonce.nonce}`;
+      const message = [
+        'Taskrit Wallet Verification',
+        `Network: solana-${solanaUtil.getCluster()}`,
+        `Wallet: ${normalizedAddress}`,
+        `Nonce: ${nonce.nonce}`,
+      ].join('\n');
 
       res.status(200).json({
         nonce: nonce.nonce,
@@ -51,20 +57,19 @@ export class WalletController {
         return;
       }
 
-      const { wallet_address, signature, nonce, message }: WalletConnectRequest = req.body;
+      const { wallet_address, signature, nonce, message, signature_encoding }: WalletConnectRequest = req.body;
 
       if (!wallet_address || !signature || !nonce) {
         res.status(400).json({ error: 'Missing required fields: wallet_address, signature, nonce' });
         return;
       }
 
-      if (!web3Util.isValidAddress(wallet_address)) {
+      if (!solanaUtil.isValidAddress(wallet_address)) {
         res.status(422).json({ error: 'Invalid wallet address' });
         return;
       }
 
-      // Normalize address to checksum format for consistency
-      const normalizedRequestAddress = web3Util.normalizeAddress(wallet_address);
+      const normalizedRequestAddress = solanaUtil.normalizeAddress(wallet_address);
       if (!normalizedRequestAddress) {
         res.status(422).json({ error: 'Invalid wallet address' });
         return;
@@ -78,50 +83,72 @@ export class WalletController {
         return;
       }
 
-      // Signature 검증
-      const messageCandidates = [
-        nonce,
-        `Sign this message to verify wallet ownership\nNonce: ${nonce}`,
-        `Sign this message to verify wallet ownership: ${nonce}`,
-      ];
+      const defaultMessage = [
+        'Taskrit Wallet Verification',
+        `Network: solana-${solanaUtil.getCluster()}`,
+        `Wallet: ${normalizedRequestAddress}`,
+        `Nonce: ${nonce}`,
+      ].join('\n');
+
+      // Frontend implementations may differ in newline handling (\n vs \r\n vs escaped "\\n").
+      // Build a deduplicated candidate set so valid signatures do not fail due to formatting differences.
+      const candidateSet = new Set<string>();
+      const baseMessages = [defaultMessage, nonce];
 
       if (message?.trim()) {
-        messageCandidates.unshift(message.trim());
+        baseMessages.unshift(message.trim());
       }
 
-      let recoveredAddress: string | null = null;
+      for (const base of baseMessages) {
+        const normalizedLf = base.replace(/\r\n/g, '\n');
+        const normalizedCrlf = normalizedLf.replace(/\n/g, '\r\n');
+        const escapedNewline = normalizedLf.replace(/\n/g, '\\n');
+        const unescapedNewline = base.replace(/\\n/g, '\n');
+
+        candidateSet.add(base);
+        candidateSet.add(base.trim());
+        candidateSet.add(normalizedLf);
+        candidateSet.add(normalizedCrlf);
+        candidateSet.add(escapedNewline);
+        candidateSet.add(unescapedNewline);
+        candidateSet.add(unescapedNewline.replace(/\r\n/g, '\n'));
+      }
+
+      const messageCandidates = Array.from(candidateSet).filter(Boolean);
+
+      let matched = false;
       for (const candidate of messageCandidates) {
-        recoveredAddress = web3Util.verifySignature(candidate, signature);
-        if (recoveredAddress) {
+        if (solanaUtil.verifyMessageSignature(candidate, signature, normalizedRequestAddress, signature_encoding)) {
+          matched = true;
           break;
         }
       }
 
-      if (!recoveredAddress) {
-        res.status(401).json({ error: 'Signature verification failed. Sign exact nonce/message from connect request.' });
-        return;
-      }
+      if (!matched) {
+        const isDev = process.env.NODE_ENV !== 'production';
 
-      // 복구된 주소와 요청된 주소 일치 확인 (both in checksum format)
-      console.log('Wallet address verification:', {
-        requested: wallet_address,
-        normalized_requested: normalizedRequestAddress,
-        recovered: recoveredAddress,
-        match: normalizedRequestAddress === recoveredAddress,
-      });
-
-      if (normalizedRequestAddress !== recoveredAddress) {
         res.status(401).json({
-          error: 'Signature does not match wallet address',
+          error: 'Signature does not match wallet address or message',
           details: {
             requested: normalizedRequestAddress,
-            recovered: recoveredAddress,
+            expected_message: defaultMessage,
+            tip: 'Ensure frontend signs the exact UTF-8 bytes of the message from /wallets/connect/request and sends matching signature_encoding when needed.',
+            ...(isDev
+              ? {
+                  provided_message: message || null,
+                  provided_message_hex: message ? toHex(message) : null,
+                  expected_message_hex: toHex(defaultMessage),
+                  candidate_messages: messageCandidates,
+                  candidate_message_hexes: messageCandidates.map((candidate) => toHex(candidate)),
+                  signature_encoding: signature_encoding || 'auto',
+                  signature_length: signature.length,
+                }
+              : {}),
           },
         });
         return;
       }
 
-      // 지갑 주소 연결 (이미 checksum format)
       await userService.connectWallet(req.user.user_uuid, normalizedRequestAddress);
 
       // Nonce 삭제

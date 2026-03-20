@@ -1,7 +1,7 @@
 import { User } from '../models/User';
 import { User as IUser, SignupRequest, UpdateUserRequest } from '../types';
 import { passwordUtil } from '../utils/password';
-import { web3Util } from '../utils/web3';
+import { solanaUtil } from '../utils/solana';
 import { v4 as uuidv4 } from 'uuid';
 
 export class UserService {
@@ -21,13 +21,13 @@ export class UserService {
     // 지갑 주소가 제공된 경우 중복 확인
     let normalizedWallet: string | null = null;
     if (req.wallet_address) {
-      if (!web3Util.isValidAddress(req.wallet_address)) {
+      if (!solanaUtil.isValidAddress(req.wallet_address)) {
         const error = new Error('Invalid wallet address');
         (error as any).statusCode = 422;
         throw error;
       }
 
-      normalizedWallet = web3Util.normalizeAddress(req.wallet_address);
+      normalizedWallet = solanaUtil.normalizeAddress(req.wallet_address);
 
       const existingWallet = await User.findOne({ wallet_address: normalizedWallet });
 
@@ -161,8 +161,13 @@ export class UserService {
    * 지갑 주소로 사용자 조회
    */
   async getUserByWallet(wallet_address: string): Promise<IUser | null> {
+    const normalizedWallet = solanaUtil.normalizeAddress(wallet_address);
+    if (!normalizedWallet) {
+      return null;
+    }
+
     const user = await User.findOne({
-      wallet_address: wallet_address.toLowerCase(),
+      wallet_address: normalizedWallet,
       deleted_at: null,
     });
 
@@ -173,7 +178,7 @@ export class UserService {
    * 사용자에게 지갑 주소 연결
    */
   async connectWallet(user_uuid: string, wallet_address: string): Promise<void> {
-    const normalizedWallet = web3Util.normalizeAddress(wallet_address);
+    const normalizedWallet = solanaUtil.normalizeAddress(wallet_address);
 
     if (!normalizedWallet) {
       const error = new Error('Invalid wallet address');

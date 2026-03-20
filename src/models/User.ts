@@ -35,7 +35,6 @@ const userSchema = new Schema<UserDocument>(
     wallet_address: {
       type: String,
       sparse: true,
-      lowercase: true,
       default: null,
     },
     created_at: {

@@ -19,7 +19,6 @@ const nonceSchema = new Schema<NonceDocument>(
     wallet_address: {
       type: String,
       required: true,
-      lowercase: true,
     },
     nonce: {
       type: String,
