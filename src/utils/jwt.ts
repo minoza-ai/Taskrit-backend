@@ -1,10 +1,14 @@
 import jwt from 'jsonwebtoken';
 import { JWTPayload, TokenResponse } from '../types';
 
-const accessSecret = process.env.JWT_ACCESS_SECRET || 'your_access_secret_key';
-const refreshSecret = process.env.JWT_REFRESH_SECRET || 'your_refresh_secret_key';
+const accessSecret = process.env.JWT_ACCESS_SECRET?.trim();
+const refreshSecret = process.env.JWT_REFRESH_SECRET?.trim();
 const accessExpiresIn = parseInt(process.env.JWT_ACCESS_EXPIRES_IN || '3600');
 const refreshExpiresIn = parseInt(process.env.JWT_REFRESH_EXPIRES_IN || '1209600');
+
+if (!accessSecret || !refreshSecret) {
+  throw new Error('JWT_ACCESS_SECRET and JWT_REFRESH_SECRET environment variables are required');
+}
 
 export const jwtUtil = {
   generateTokens(payload: Omit<JWTPayload, 'iat' | 'exp'>): TokenResponse {
