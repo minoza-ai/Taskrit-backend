@@ -365,6 +365,7 @@ MONGODB_URI=mongodb://localhost:27017/taskrit
 RATE_LIMIT_WINDOW_MS=900000        # 15분
 RATE_LIMIT_MAX_REQUESTS=5          # 최대 시도 5회
 RATE_LIMIT_LOCK_TIME=600000        # 10분 잠금
+RATE_LIMIT_MAX_STORE_SIZE=50000    # 메모리 내 rate-limit 키 최대 개수
 
 # Solana 설정
 SOLANA_CLUSTER=devnet
