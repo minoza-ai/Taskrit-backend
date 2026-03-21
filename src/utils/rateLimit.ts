@@ -6,6 +6,8 @@ const WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'); // 15�
 const MAX_REQUESTS = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '5');
 const LOCK_TIME = parseInt(process.env.RATE_LIMIT_LOCK_TIME || '600000'); // 10분
 const MAX_STORE_SIZE = parseInt(process.env.RATE_LIMIT_MAX_STORE_SIZE || '50000');
+const STORE_CAPACITY_LOCK_MS = 1000;
+let storeKeyCount = 0;
 
 export const rateLimitUtil = {
   /**
@@ -15,18 +17,25 @@ export const rateLimitUtil = {
    */
   checkLimit(key: string): { allowed: boolean; lockedUntil?: number } {
     const now = Date.now();
-    if (!store[key] && Object.keys(store).length >= MAX_STORE_SIZE) {
+    const hasRecord = !!store[key];
+    let storeSize = storeKeyCount;
+
+    if (!hasRecord && storeSize >= MAX_STORE_SIZE) {
       this.cleanup();
+      storeSize = storeKeyCount;
     }
 
-    if (!store[key] && Object.keys(store).length >= MAX_STORE_SIZE) {
-      return { allowed: false, lockedUntil: now + 1000 };
+    if (!hasRecord && storeSize >= MAX_STORE_SIZE) {
+      return { allowed: false, lockedUntil: now + STORE_CAPACITY_LOCK_MS };
     }
 
     const record = store[key];
 
     // 기존 기록이 없거나 윈도우가 만료된 경우
     if (!record || now > record.resetTime) {
+      if (!record) {
+        storeKeyCount++;
+      }
       store[key] = {
         count: 1,
         resetTime: now + WINDOW_MS,
@@ -63,7 +72,10 @@ export const rateLimitUtil = {
    * 특정 키의 Rate Limit 초기화
    */
   reset(key: string): void {
-    delete store[key];
+    if (store[key]) {
+      delete store[key];
+      storeKeyCount--;
+    }
   },
 
   /**
@@ -73,6 +85,7 @@ export const rateLimitUtil = {
     Object.keys(store).forEach((key) => {
       delete store[key];
     });
+    storeKeyCount = 0;
   },
 
   /**
@@ -84,6 +97,7 @@ export const rateLimitUtil = {
       const record = store[key];
       if (now > record.resetTime && !record.lockedUntil) {
         delete store[key];
+        storeKeyCount--;
       }
     });
   },
