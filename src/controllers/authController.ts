@@ -5,6 +5,12 @@ import { jwtUtil } from '../utils/jwt';
 import { rateLimitUtil } from '../utils/rateLimit';
 
 export class AuthController {
+  private static readonly USER_ID_REGEX = /^[a-zA-Z0-9_-]{3,32}$/;
+
+  private isValidUserId(value: unknown): value is string {
+    return typeof value === 'string' && AuthController.USER_ID_REGEX.test(value);
+  }
+
   /**
    * 회원가입
    */
@@ -20,6 +26,11 @@ export class AuthController {
       // 필수 필드 검증
       if (!signupReq.user_id || !signupReq.nickname || !signupReq.password) {
         res.status(400).json({ error: 'Missing required fields' });
+        return;
+      }
+
+      if (!this.isValidUserId(signupReq.user_id)) {
+        res.status(422).json({ error: 'Invalid user_id format' });
         return;
       }
 
@@ -49,6 +60,11 @@ export class AuthController {
       // 필수 필드 검증
       if (!authReq.user_id || !authReq.password) {
         res.status(400).json({ error: 'Missing user_id or password' });
+        return;
+      }
+
+      if (!this.isValidUserId(authReq.user_id)) {
+        res.status(422).json({ error: 'Invalid user_id format' });
         return;
       }
 

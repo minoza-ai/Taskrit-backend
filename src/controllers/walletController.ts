@@ -4,8 +4,6 @@ import { userService } from '../services/userService';
 import { nonceService } from '../services/nonceService';
 import { solanaUtil } from '../utils/solana';
 
-const toHex = (value: string): string => Buffer.from(value, 'utf8').toString('hex');
-
 export class WalletController {
   /**
    * 지갑 연동 요청 (Nonce 발급)
@@ -125,25 +123,12 @@ export class WalletController {
       }
 
       if (!matched) {
-        const isDev = process.env.NODE_ENV !== 'production';
-
         res.status(401).json({
           error: 'Signature does not match wallet address or message',
           details: {
             requested: normalizedRequestAddress,
             expected_message: defaultMessage,
             tip: 'Ensure frontend signs the exact UTF-8 bytes of the message from /wallets/connect/request and sends matching signature_encoding when needed.',
-            ...(isDev
-              ? {
-                  provided_message: message || null,
-                  provided_message_hex: message ? toHex(message) : null,
-                  expected_message_hex: toHex(defaultMessage),
-                  candidate_messages: messageCandidates,
-                  candidate_message_hexes: messageCandidates.map((candidate) => toHex(candidate)),
-                  signature_encoding: signature_encoding || 'auto',
-                  signature_length: signature.length,
-                }
-              : {}),
           },
         });
         return;

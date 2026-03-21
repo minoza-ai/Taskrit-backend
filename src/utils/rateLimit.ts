@@ -5,6 +5,7 @@ const store: RateLimitStore = {};
 const WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'); // 15분
 const MAX_REQUESTS = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '5');
 const LOCK_TIME = parseInt(process.env.RATE_LIMIT_LOCK_TIME || '600000'); // 10분
+const MAX_STORE_SIZE = parseInt(process.env.RATE_LIMIT_MAX_STORE_SIZE || '50000');
 
 export const rateLimitUtil = {
   /**
@@ -14,6 +15,14 @@ export const rateLimitUtil = {
    */
   checkLimit(key: string): { allowed: boolean; lockedUntil?: number } {
     const now = Date.now();
+    if (!store[key] && Object.keys(store).length >= MAX_STORE_SIZE) {
+      this.cleanup();
+    }
+
+    if (!store[key] && Object.keys(store).length >= MAX_STORE_SIZE) {
+      return { allowed: false, lockedUntil: now + 1000 };
+    }
+
     const record = store[key];
 
     // 기존 기록이 없거나 윈도우가 만료된 경우
