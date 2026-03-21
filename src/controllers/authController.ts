@@ -6,6 +6,15 @@ import { rateLimitUtil } from '../utils/rateLimit';
 
 export class AuthController {
   private static readonly USER_ID_REGEX = /^[a-zA-Z0-9_-]{3,32}$/;
+  private static readonly INVALID_USER_ID_ERROR = '사용할 수 없는 문자열이 포함되어 있습니다';
+
+  private sanitizeUserId(value: unknown): string {
+    if (typeof value !== 'string') {
+      return '';
+    }
+
+    return value.replace(/\s+/g, '');
+  }
 
   private isValidUserId(value: unknown): value is string {
     return typeof value === 'string' && AuthController.USER_ID_REGEX.test(value);
@@ -16,21 +25,38 @@ export class AuthController {
    */
   async signup(req: RequestWithUser, res: Response): Promise<void> {
     try {
+      // 🔍 First, validate the original input before sanitizing
+      const originalUserId = req.body.user_id;
+      
+      if (!originalUserId || typeof originalUserId !== 'string') {
+        res.status(400).json({ error: 'User ID is required' });
+        return;
+      }
+
+      const sanitizedUserId = this.sanitizeUserId(originalUserId);
+
+      // If sanitization removed all characters, it's invalid
+      if (!sanitizedUserId) {
+        res.status(422).json({ error: AuthController.INVALID_USER_ID_ERROR });
+        return;
+      }
+
+      // Validate the sanitized user_id against the regex
+      if (!this.isValidUserId(sanitizedUserId)) {
+        res.status(422).json({ error: AuthController.INVALID_USER_ID_ERROR });
+        return;
+      }
+
       const signupReq: SignupRequest = {
-        user_id: req.body.user_id,
+        user_id: sanitizedUserId,
         nickname: req.body.nickname,
         password: req.body.password,
         wallet_address: req.body.wallet_address,
       };
 
       // 필수 필드 검증
-      if (!signupReq.user_id || !signupReq.nickname || !signupReq.password) {
+      if (!signupReq.nickname || !signupReq.password) {
         res.status(400).json({ error: 'Missing required fields' });
-        return;
-      }
-
-      if (!this.isValidUserId(signupReq.user_id)) {
-        res.status(422).json({ error: 'Invalid user_id format' });
         return;
       }
 
@@ -52,19 +78,36 @@ export class AuthController {
    */
   async login(req: RequestWithUser, res: Response): Promise<void> {
     try {
+      // 🔍 First, validate the original input before sanitizing
+      const originalUserId = req.body.user_id;
+      
+      if (!originalUserId || typeof originalUserId !== 'string') {
+        res.status(400).json({ error: 'User ID is required' });
+        return;
+      }
+
+      const sanitizedUserId = this.sanitizeUserId(originalUserId);
+
+      // If sanitization removed all characters, it's invalid
+      if (!sanitizedUserId) {
+        res.status(422).json({ error: AuthController.INVALID_USER_ID_ERROR });
+        return;
+      }
+
+      // Validate the sanitized user_id against the regex
+      if (!this.isValidUserId(sanitizedUserId)) {
+        res.status(422).json({ error: AuthController.INVALID_USER_ID_ERROR });
+        return;
+      }
+
       const authReq: AuthRequest = {
-        user_id: req.body.user_id,
+        user_id: sanitizedUserId,
         password: req.body.password,
       };
 
       // 필수 필드 검증
-      if (!authReq.user_id || !authReq.password) {
-        res.status(400).json({ error: 'Missing user_id or password' });
-        return;
-      }
-
-      if (!this.isValidUserId(authReq.user_id)) {
-        res.status(422).json({ error: 'Invalid user_id format' });
+      if (!authReq.password) {
+        res.status(400).json({ error: 'Password is required' });
         return;
       }
 

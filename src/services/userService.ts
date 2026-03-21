@@ -9,8 +9,10 @@ export class UserService {
    * 새로운 사용자 생성
    */
   async createUser(req: SignupRequest): Promise<IUser> {
+    const sanitizedUserId = req.user_id.replace(/\s+/g, '');
+
     // 사용자 ID 중복 확인
-    const existingUser = await User.findOne({ user_id: req.user_id });
+    const existingUser = await User.findOne({ user_id: sanitizedUserId });
 
     if (existingUser) {
       const error = new Error('User ID already exists');
@@ -47,7 +49,7 @@ export class UserService {
 
     const user = await User.create({
       user_uuid,
-      user_id: req.user_id,
+      user_id: sanitizedUserId,
       nickname: req.nickname,
       password: hashedPassword,
       wallet_address: normalizedWallet,
@@ -63,8 +65,10 @@ export class UserService {
    * 사용자 ID와 비밀번호로 사용자 조회
    */
   async authenticateUser(user_id: string, password: string): Promise<IUser | null> {
+    const sanitizedUserId = user_id.replace(/\s+/g, '');
+
     const user = await User.findOne({
-      user_id,
+      user_id: sanitizedUserId,
       deleted_at: null,
     });
 
