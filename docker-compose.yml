@@ -4,6 +4,8 @@ services:
     container_name: taskrit-backend
     ports:
       - "3000:3000"
+    volumes:
+      - ./uploads:/app/uploads
     environment:
       NODE_ENV: production
       PORT: 3000

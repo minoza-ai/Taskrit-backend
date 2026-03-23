@@ -27,6 +27,7 @@ app.use(cors());
 const staticPath = path.join(process.cwd(), UPLOAD_DIR);
 console.log(`Serving static files from: ${staticPath}`);
 app.use('/uploads', express.static(staticPath));
+app.use('/api/uploads', express.static(staticPath)); // Add support for /api/uploads path
 
 // 헬스 체크
 app.get('/health', (req, res) => {
