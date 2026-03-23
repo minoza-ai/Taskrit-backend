@@ -14,6 +14,7 @@ import userRoutes from './routes/users';
 import walletRoutes from './routes/wallets';
 import testRoutes from './routes/test';
 import projectRoutes from './routes/projects';
+import assetRoutes from './routes/assets';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -39,6 +40,7 @@ app.use('/user', authRoutes);
 app.use('/user', userRoutes);
 app.use('/wallets', walletRoutes);
 app.use('/projects', projectRoutes);
+app.use('/assets', assetRoutes);
 app.use('/test', testRoutes);
 
 // 404 핸들러
