@@ -5,6 +5,7 @@ interface UserDocument extends Document {
   user_id: string;
   nickname: string;
   password: string;
+  profile_image_url?: string;
   wallet_address: string | null;
   created_at: number;
   updated_at: number;
@@ -31,6 +32,10 @@ const userSchema = new Schema<UserDocument>(
     password: {
       type: String,
       required: true,
+    },
+    profile_image_url: {
+      type: String,
+      required: false,
     },
     wallet_address: {
       type: String,

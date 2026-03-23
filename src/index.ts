@@ -1,10 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import { database } from './models/database';
 
 // 환경변수 로드
 dotenv.config();
+const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads';
 
 // 라우터 임포트
 import authRoutes from './routes/auth';
@@ -20,6 +22,11 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
+
+// Static File Serving
+const staticPath = path.join(process.cwd(), UPLOAD_DIR);
+console.log(`Serving static files from: ${staticPath}`);
+app.use('/uploads', express.static(staticPath));
 
 // 헬스 체크
 app.get('/health', (req, res) => {

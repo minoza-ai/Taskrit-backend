@@ -135,6 +135,30 @@ export class UserService {
   }
 
   /**
+   * 사용자 프로필 이미지 업데이트
+   */
+  async updateProfileImage(user_uuid: string, profile_image_url: string): Promise<IUser> {
+    const user = await User.findOneAndUpdate(
+      { user_uuid },
+      { 
+        $set: { 
+          profile_image_url: profile_image_url,
+          updated_at: Math.floor(Date.now() / 1000)
+        } 
+      },
+      { new: true }
+    );
+
+    if (!user) {
+      const error = new Error('User not found');
+      (error as any).statusCode = 404;
+      throw error;
+    }
+
+    return this.formatUser(user);
+  }
+
+  /**
    * 사용자 삭제 (Soft Delete)
    */
   async deleteUser(user_uuid: string): Promise<void> {
@@ -234,6 +258,7 @@ export class UserService {
       user_id: user.user_id,
       nickname: user.nickname,
       password: user.password,
+      profile_image_url: user.profile_image_url,
       wallet_address: user.wallet_address,
       created_at: user.created_at,
       updated_at: user.updated_at,

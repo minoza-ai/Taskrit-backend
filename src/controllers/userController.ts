@@ -1,6 +1,9 @@
 import { Response } from 'express';
 import { RequestWithUser, UpdateUserRequest } from '../types';
 import { userService } from '../services/userService';
+import fs from 'fs/promises';
+import path from 'path';
+import sharp from 'sharp';
 
 export class UserController {
   /**
@@ -25,6 +28,7 @@ export class UserController {
         user_id: user.user_id,
         nickname: user.nickname,
         wallet_address: user.wallet_address,
+        profile_image_url: user.profile_image_url,
         created_at: user.created_at,
       });
     } catch (err: any) {
@@ -74,6 +78,60 @@ export class UserController {
       const statusCode = err.statusCode || 500;
       const message = err.message || 'Internal server error';
       res.status(statusCode).json({ error: message });
+    }
+  }
+
+  /**
+   * 프로필 이미지 업로드
+   */
+  async uploadProfileImage(req: RequestWithUser, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      if (!req.file) {
+        res.status(400).json({ error: 'No file uploaded' });
+        return;
+      }
+
+      const user_uuid = req.user.user_uuid;
+      const fileBuffer = req.file.buffer;
+      const filename = `${user_uuid}-${Date.now()}.webp`;
+      const uploadDir = path.join(process.cwd(), process.env.UPLOAD_DIR || 'uploads');
+
+      // Ensure upload directory exists
+      try {
+        await fs.access(uploadDir);
+      } catch {
+        await fs.mkdir(uploadDir, { recursive: true });
+      }
+
+      const filePath = path.join(uploadDir, filename);
+
+      // Process image with sharp
+      await sharp(fileBuffer)
+        .resize(500, 500, { fit: 'cover' })
+        .webp({ quality: 80 })
+        .toFile(filePath);
+
+      const profile_image_url = `/uploads/${filename}`;
+
+      const updatedUser = await userService.updateProfileImage(user_uuid, profile_image_url);
+
+      res.status(200).json({
+        user_uuid: updatedUser.user_uuid,
+        user_id: updatedUser.user_id,
+        nickname: updatedUser.nickname,
+        wallet_address: updatedUser.wallet_address,
+        profile_image_url: updatedUser.profile_image_url,
+        created_at: updatedUser.created_at,
+      });
+
+    } catch (err: any) {
+      console.error(err);
+      res.status(500).json({ error: 'Internal server error' });
     }
   }
 }

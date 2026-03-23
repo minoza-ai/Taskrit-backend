@@ -5,6 +5,7 @@ export interface User {
   user_id: string;
   nickname: string;
   password: string;
+  profile_image_url?: string;
   wallet_address: string | null;
   created_at: number;
   updated_at: number;
