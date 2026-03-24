@@ -127,6 +127,8 @@ jobs:
               -e JWT_ACCESS_SECRET="${{ secrets.JWT_ACCESS_SECRET }}" \
               -e JWT_REFRESH_SECRET="${{ secrets.JWT_REFRESH_SECRET }}" \
               -e NODE_ENV=production \
+              -e TEAMING_ENGINE_URL="http://host.docker.internal:3002" \
+              --add-host=host.docker.internal:host-gateway \
               -v "$HOME/taskrit_data/backend/uploads:/app/uploads" \
               -p "${{ secrets.SERVER_PORT }}:${{ env.CONTAINER_PORT }}" \
               "${{ env.IMAGE_NAME }}:latest"
