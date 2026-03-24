@@ -127,7 +127,7 @@ jobs:
               -e JWT_ACCESS_SECRET="${{ secrets.JWT_ACCESS_SECRET }}" \
               -e JWT_REFRESH_SECRET="${{ secrets.JWT_REFRESH_SECRET }}" \
               -e NODE_ENV=production \
-              -e TEAMING_ENGINE_URL="https://teaming.taskr.it" \
+              -e TEAMING_ENGINE_URL="${{ secrets.TEAMING_ENGINE_URL }}" \
               -v "$HOME/taskrit_data/backend/uploads:/app/uploads" \
               -p "${{ secrets.SERVER_PORT }}:${{ env.CONTAINER_PORT }}" \
               "${{ env.IMAGE_NAME }}:latest"
