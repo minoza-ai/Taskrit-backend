@@ -93,7 +93,7 @@ jobs:
 
             docker network create "taskrit-network" || true
             docker volume create "${{ env.MONGO_VOLUME_NAME }}" || true
-            mkdir -p uploads
+            mkdir -p $HOME/taskrit_data/backend/uploads
 
             docker stop "${{ env.MONGO_CONTAINER_NAME }}" || true
             docker rm "${{ env.MONGO_CONTAINER_NAME }}" || true
@@ -127,7 +127,7 @@ jobs:
               -e JWT_ACCESS_SECRET="${{ secrets.JWT_ACCESS_SECRET }}" \
               -e JWT_REFRESH_SECRET="${{ secrets.JWT_REFRESH_SECRET }}" \
               -e NODE_ENV=production \
-              -v "$(pwd)/uploads:/app/uploads" \
+              -v "$HOME/taskrit_data/backend/uploads:/app/uploads" \
               -p "${{ secrets.SERVER_PORT }}:${{ env.CONTAINER_PORT }}" \
               "${{ env.IMAGE_NAME }}:latest"
           EOF
