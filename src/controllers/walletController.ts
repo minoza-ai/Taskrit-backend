@@ -3,8 +3,61 @@ import { RequestWithUser, WalletConnectRequest } from '../types';
 import { userService } from '../services/userService';
 import { nonceService } from '../services/nonceService';
 import { solanaUtil } from '../utils/solana';
+import { jwtUtil } from '../utils/jwt';
 
 export class WalletController {
+  private buildDefaultMessage(normalizedAddress: string, nonce: string): string {
+    return [
+      'Taskrit Wallet Verification',
+      `Network: solana-${solanaUtil.getCluster()}`,
+      `Wallet: ${normalizedAddress}`,
+      `Nonce: ${nonce}`,
+    ].join('\n');
+  }
+
+  private buildMessageCandidates(defaultMessage: string, nonce: string, message?: string): string[] {
+    // Frontend implementations may differ in newline handling (\n vs \r\n vs escaped "\\n").
+    // Build a deduplicated candidate set so valid signatures do not fail due to formatting differences.
+    const candidateSet = new Set<string>();
+    const baseMessages = [defaultMessage, nonce];
+
+    if (message?.trim()) {
+      baseMessages.unshift(message.trim());
+    }
+
+    for (const base of baseMessages) {
+      const normalizedLf = base.replace(/\r\n/g, '\n');
+      const normalizedCrlf = normalizedLf.replace(/\n/g, '\r\n');
+      const escapedNewline = normalizedLf.replace(/\n/g, '\\n');
+      const unescapedNewline = base.replace(/\\n/g, '\n');
+
+      candidateSet.add(base);
+      candidateSet.add(base.trim());
+      candidateSet.add(normalizedLf);
+      candidateSet.add(normalizedCrlf);
+      candidateSet.add(escapedNewline);
+      candidateSet.add(unescapedNewline);
+      candidateSet.add(unescapedNewline.replace(/\r\n/g, '\n'));
+    }
+
+    return Array.from(candidateSet).filter(Boolean);
+  }
+
+  private verifySignatureFromCandidates(
+    normalizedAddress: string,
+    signature: string,
+    signatureEncoding: WalletConnectRequest['signature_encoding'],
+    candidates: string[],
+  ): boolean {
+    for (const candidate of candidates) {
+      if (solanaUtil.verifyMessageSignature(candidate, signature, normalizedAddress, signatureEncoding)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   /**
    * 지갑 연동 요청 (Nonce 발급)
    */
@@ -81,46 +134,14 @@ export class WalletController {
         return;
       }
 
-      const defaultMessage = [
-        'Taskrit Wallet Verification',
-        `Network: solana-${solanaUtil.getCluster()}`,
-        `Wallet: ${normalizedRequestAddress}`,
-        `Nonce: ${nonce}`,
-      ].join('\n');
-
-      // Frontend implementations may differ in newline handling (\n vs \r\n vs escaped "\\n").
-      // Build a deduplicated candidate set so valid signatures do not fail due to formatting differences.
-      const candidateSet = new Set<string>();
-      const baseMessages = [defaultMessage, nonce];
-
-      if (message?.trim()) {
-        baseMessages.unshift(message.trim());
-      }
-
-      for (const base of baseMessages) {
-        const normalizedLf = base.replace(/\r\n/g, '\n');
-        const normalizedCrlf = normalizedLf.replace(/\n/g, '\r\n');
-        const escapedNewline = normalizedLf.replace(/\n/g, '\\n');
-        const unescapedNewline = base.replace(/\\n/g, '\n');
-
-        candidateSet.add(base);
-        candidateSet.add(base.trim());
-        candidateSet.add(normalizedLf);
-        candidateSet.add(normalizedCrlf);
-        candidateSet.add(escapedNewline);
-        candidateSet.add(unescapedNewline);
-        candidateSet.add(unescapedNewline.replace(/\r\n/g, '\n'));
-      }
-
-      const messageCandidates = Array.from(candidateSet).filter(Boolean);
-
-      let matched = false;
-      for (const candidate of messageCandidates) {
-        if (solanaUtil.verifyMessageSignature(candidate, signature, normalizedRequestAddress, signature_encoding)) {
-          matched = true;
-          break;
-        }
-      }
+      const defaultMessage = this.buildDefaultMessage(normalizedRequestAddress, nonce);
+      const messageCandidates = this.buildMessageCandidates(defaultMessage, nonce, message);
+      const matched = this.verifySignatureFromCandidates(
+        normalizedRequestAddress,
+        signature,
+        signature_encoding,
+        messageCandidates,
+      );
 
       if (!matched) {
         res.status(401).json({
@@ -140,6 +161,76 @@ export class WalletController {
       await nonceService.deleteNonce(nonce);
 
       res.status(200).json({ message: 'Wallet connected successfully' });
+    } catch (err: any) {
+      const statusCode = err.statusCode || 500;
+      const message = err.message || 'Internal server error';
+      res.status(statusCode).json({ error: message });
+    }
+  }
+
+  /**
+   * 지갑 로그인 (Signature 검증 후 토큰 발급)
+   */
+  async loginWithWallet(req: RequestWithUser, res: Response): Promise<void> {
+    try {
+      const { wallet_address, signature, nonce, message, signature_encoding }: WalletConnectRequest = req.body;
+
+      if (!wallet_address || !signature || !nonce) {
+        res.status(400).json({ error: 'Missing required fields: wallet_address, signature, nonce' });
+        return;
+      }
+
+      if (!solanaUtil.isValidAddress(wallet_address)) {
+        res.status(422).json({ error: 'Invalid wallet address' });
+        return;
+      }
+
+      const normalizedRequestAddress = solanaUtil.normalizeAddress(wallet_address);
+      if (!normalizedRequestAddress) {
+        res.status(422).json({ error: 'Invalid wallet address' });
+        return;
+      }
+
+      const nonceRecord = await nonceService.verifyNonce(normalizedRequestAddress, nonce);
+      if (!nonceRecord) {
+        res.status(400).json({ error: 'Invalid or expired nonce' });
+        return;
+      }
+
+      const user = await userService.getUserByWallet(normalizedRequestAddress);
+      if (!user) {
+        res.status(404).json({ error: 'No account linked to this wallet' });
+        return;
+      }
+
+      const defaultMessage = this.buildDefaultMessage(normalizedRequestAddress, nonce);
+      const messageCandidates = this.buildMessageCandidates(defaultMessage, nonce, message);
+      const matched = this.verifySignatureFromCandidates(
+        normalizedRequestAddress,
+        signature,
+        signature_encoding,
+        messageCandidates,
+      );
+
+      if (!matched) {
+        res.status(401).json({
+          error: 'Signature does not match wallet address or message',
+          details: {
+            requested: normalizedRequestAddress,
+            expected_message: defaultMessage,
+          },
+        });
+        return;
+      }
+
+      await nonceService.deleteNonce(nonce);
+
+      const tokens = jwtUtil.generateTokens({
+        user_uuid: user.user_uuid,
+        user_id: user.user_id,
+      });
+
+      res.status(200).json(tokens);
     } catch (err: any) {
       const statusCode = err.statusCode || 500;
       const message = err.message || 'Internal server error';

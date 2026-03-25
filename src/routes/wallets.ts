@@ -17,6 +17,12 @@ router.post('/connect/request', (req, res) => walletController.requestConnect(re
 router.post('/connect/confirm', optionalAuthMiddleware, (req, res) => walletController.confirmConnect(req, res));
 
 /**
+ * POST /wallets/login/confirm
+ * 지갑 로그인 (Signature 검증 후 토큰 발급)
+ */
+router.post('/login/confirm', (req, res) => walletController.loginWithWallet(req, res));
+
+/**
  * DELETE /wallets
  * 지갑 연동 해제
  */

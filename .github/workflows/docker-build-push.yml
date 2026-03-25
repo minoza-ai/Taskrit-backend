@@ -104,6 +104,7 @@ jobs:
               --name "${{ env.MONGO_CONTAINER_NAME }}" \
               --network "taskrit-network" \
               --restart unless-stopped \
+              -e TZ=Asia/Seoul \
               -e MONGO_INITDB_DATABASE=taskrit \
               -e MONGO_INITDB_ROOT_USERNAME="${{ secrets.MONGODB_USER }}" \
               -e MONGO_INITDB_ROOT_PASSWORD="${{ secrets.MONGODB_PASSWORD }}" \
@@ -123,6 +124,7 @@ jobs:
               --name "${{ env.CONTAINER_NAME }}" \
               --network "taskrit-network" \
               --restart unless-stopped \
+              -e TZ=Asia/Seoul \
               -e MONGODB_URI="mongodb://${{ secrets.MONGODB_USER }}:${{ secrets.MONGODB_PASSWORD }}@${{ env.MONGO_CONTAINER_NAME }}:27017/taskrit?authSource=admin" \
               -e JWT_ACCESS_SECRET="${{ secrets.JWT_ACCESS_SECRET }}" \
               -e JWT_REFRESH_SECRET="${{ secrets.JWT_REFRESH_SECRET }}" \
