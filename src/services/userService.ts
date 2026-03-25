@@ -2,6 +2,7 @@ import { User } from '../models/User';
 import { User as IUser, SignupRequest, UpdateUserRequest } from '../types';
 import { passwordUtil } from '../utils/password';
 import { solanaUtil } from '../utils/solana';
+import { otpUtil } from '../utils/otp';
 import { v4 as uuidv4 } from 'uuid';
 
 export class UserService {
@@ -53,6 +54,9 @@ export class UserService {
       nickname: req.nickname,
       password: hashedPassword,
       wallet_address: normalizedWallet,
+      otp_enabled: false,
+      otp_secret: null,
+      otp_pending_secret: null,
       created_at: now,
       updated_at: now,
       deleted_at: null,
@@ -249,6 +253,124 @@ export class UserService {
     );
   }
 
+  async createOtpSetup(user_uuid: string): Promise<{ secret: string; otpauth_url: string; qr_code_data_url: string }> {
+    const user = await User.findOne({ user_uuid, deleted_at: null });
+
+    if (!user) {
+      const error = new Error('User not found');
+      (error as any).statusCode = 404;
+      throw error;
+    }
+
+    const generated = otpUtil.generateSecret(user.user_id);
+    const qrCodeDataUrl = await otpUtil.generateQrDataUrl(generated.otpauth_url);
+
+    await User.updateOne(
+      { user_uuid },
+      {
+        otp_pending_secret: generated.base32,
+        updated_at: Math.floor(Date.now() / 1000),
+      }
+    );
+
+    return {
+      secret: generated.base32,
+      otpauth_url: generated.otpauth_url,
+      qr_code_data_url: qrCodeDataUrl,
+    };
+  }
+
+  async getOtpStatus(user_uuid: string): Promise<{ otp_enabled: boolean; otp_pending: boolean }> {
+    const user = await User.findOne({ user_uuid, deleted_at: null });
+
+    if (!user) {
+      const error = new Error('User not found');
+      (error as any).statusCode = 404;
+      throw error;
+    }
+
+    return {
+      otp_enabled: !!user.otp_enabled,
+      otp_pending: !!user.otp_pending_secret,
+    };
+  }
+
+  async enableOtp(user_uuid: string, code: string): Promise<void> {
+    const user = await User.findOne({ user_uuid, deleted_at: null });
+
+    if (!user) {
+      const error = new Error('User not found');
+      (error as any).statusCode = 404;
+      throw error;
+    }
+
+    if (!user.otp_pending_secret) {
+      const error = new Error('OTP setup is not initialized');
+      (error as any).statusCode = 400;
+      throw error;
+    }
+
+    if (!otpUtil.verifyToken(user.otp_pending_secret, code)) {
+      const error = new Error('Invalid OTP code');
+      (error as any).statusCode = 401;
+      throw error;
+    }
+
+    await User.updateOne(
+      { user_uuid },
+      {
+        otp_enabled: true,
+        otp_secret: user.otp_pending_secret,
+        otp_pending_secret: null,
+        updated_at: Math.floor(Date.now() / 1000),
+      }
+    );
+  }
+
+  async disableOtp(user_uuid: string, code: string): Promise<void> {
+    const user = await User.findOne({ user_uuid, deleted_at: null });
+
+    if (!user) {
+      const error = new Error('User not found');
+      (error as any).statusCode = 404;
+      throw error;
+    }
+
+    if (!user.otp_enabled || !user.otp_secret) {
+      const error = new Error('OTP is not enabled');
+      (error as any).statusCode = 400;
+      throw error;
+    }
+
+    if (!otpUtil.verifyToken(user.otp_secret, code)) {
+      const error = new Error('Invalid OTP code');
+      (error as any).statusCode = 401;
+      throw error;
+    }
+
+    await User.updateOne(
+      { user_uuid },
+      {
+        otp_enabled: false,
+        otp_secret: null,
+        otp_pending_secret: null,
+        updated_at: Math.floor(Date.now() / 1000),
+      }
+    );
+  }
+
+  verifyOtpForUser(user: IUser, code?: string): boolean {
+    if (!user.otp_enabled) {
+      return true;
+    }
+
+    if (!user.otp_secret || !code) {
+      return false;
+    }
+
+    return otpUtil.verifyToken(user.otp_secret, code);
+  }
+
   /**
    * 사용자 문서를 타입으로 변환
    */
@@ -260,6 +382,9 @@ export class UserService {
       password: user.password,
       profile_image_url: user.profile_image_url,
       wallet_address: user.wallet_address,
+      otp_enabled: !!user.otp_enabled,
+      otp_secret: user.otp_secret || null,
+      otp_pending_secret: user.otp_pending_secret || null,
       created_at: user.created_at,
       updated_at: user.updated_at,
       deleted_at: user.deleted_at,

@@ -7,6 +7,9 @@ interface UserDocument extends Document {
   password: string;
   profile_image_url?: string;
   wallet_address: string | null;
+  otp_enabled: boolean;
+  otp_secret: string | null;
+  otp_pending_secret: string | null;
   created_at: number;
   updated_at: number;
   deleted_at: number | null;
@@ -40,6 +43,19 @@ const userSchema = new Schema<UserDocument>(
     wallet_address: {
       type: String,
       sparse: true,
+      default: null,
+    },
+    otp_enabled: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
+    otp_secret: {
+      type: String,
+      default: null,
+    },
+    otp_pending_secret: {
+      type: String,
       default: null,
     },
     created_at: {

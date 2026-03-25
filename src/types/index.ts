@@ -7,6 +7,9 @@ export interface User {
   password: string;
   profile_image_url?: string;
   wallet_address: string | null;
+  otp_enabled: boolean;
+  otp_secret: string | null;
+  otp_pending_secret: string | null;
   created_at: number;
   updated_at: number;
   deleted_at: number | null;
@@ -64,6 +67,7 @@ export interface WalletConnectRequest {
   nonce: string;
   message?: string;
   signature_encoding?: 'base58' | 'base64' | 'hex';
+  otp_code?: string;
 }
 
 export interface Project {

@@ -108,7 +108,7 @@ export class WalletController {
         return;
       }
 
-      const { wallet_address, signature, nonce, message, signature_encoding }: WalletConnectRequest = req.body;
+      const { wallet_address, signature, nonce, message, signature_encoding, otp_code }: WalletConnectRequest = req.body;
 
       if (!wallet_address || !signature || !nonce) {
         res.status(400).json({ error: 'Missing required fields: wallet_address, signature, nonce' });
@@ -173,7 +173,7 @@ export class WalletController {
    */
   async loginWithWallet(req: RequestWithUser, res: Response): Promise<void> {
     try {
-      const { wallet_address, signature, nonce, message, signature_encoding }: WalletConnectRequest = req.body;
+      const { wallet_address, signature, nonce, message, signature_encoding, otp_code }: WalletConnectRequest = req.body;
 
       if (!wallet_address || !signature || !nonce) {
         res.status(400).json({ error: 'Missing required fields: wallet_address, signature, nonce' });
@@ -201,6 +201,21 @@ export class WalletController {
       if (!user) {
         res.status(404).json({ error: 'No account linked to this wallet' });
         return;
+      }
+
+      if (user.otp_enabled) {
+        const normalizedOtp = typeof otp_code === 'string' ? otp_code.trim() : '';
+
+        if (!normalizedOtp) {
+          res.status(401).json({ error: 'OTP code is required', otp_required: true });
+          return;
+        }
+
+        const validOtp = userService.verifyOtpForUser(user, normalizedOtp);
+        if (!validOtp) {
+          res.status(401).json({ error: 'Invalid OTP code', otp_required: true });
+          return;
+        }
       }
 
       const defaultMessage = this.buildDefaultMessage(normalizedRequestAddress, nonce);

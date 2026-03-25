@@ -104,6 +104,7 @@ export class AuthController {
         user_id: sanitizedUserId,
         password: req.body.password,
       };
+      const otpCode = typeof req.body.otp_code === 'string' ? req.body.otp_code.trim() : undefined;
 
       // 필수 필드 검증
       if (!authReq.password) {
@@ -131,6 +132,19 @@ export class AuthController {
 
         res.status(401).json({ error: 'Invalid user_id or password' });
         return;
+      }
+
+      if (user.otp_enabled) {
+        if (!otpCode) {
+          res.status(401).json({ error: 'OTP code is required', otp_required: true });
+          return;
+        }
+
+        const validOtp = userService.verifyOtpForUser(user, otpCode);
+        if (!validOtp) {
+          res.status(401).json({ error: 'Invalid OTP code', otp_required: true });
+          return;
+        }
       }
 
       // 성공 시 Rate Limit 초기화

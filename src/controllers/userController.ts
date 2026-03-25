@@ -29,6 +29,7 @@ export class UserController {
         nickname: user.nickname,
         wallet_address: user.wallet_address,
         profile_image_url: user.profile_image_url,
+        otp_enabled: user.otp_enabled,
         created_at: user.created_at,
       });
     } catch (err: any) {
@@ -126,12 +127,89 @@ export class UserController {
         nickname: updatedUser.nickname,
         wallet_address: updatedUser.wallet_address,
         profile_image_url: updatedUser.profile_image_url,
+        otp_enabled: updatedUser.otp_enabled,
         created_at: updatedUser.created_at,
       });
 
     } catch (err: any) {
       console.error(err);
       res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  async getOtpStatus(req: RequestWithUser, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const status = await userService.getOtpStatus(req.user.user_uuid);
+      res.status(200).json(status);
+    } catch (err: any) {
+      const statusCode = err.statusCode || 500;
+      const message = err.message || 'Internal server error';
+      res.status(statusCode).json({ error: message });
+    }
+  }
+
+  async setupOtp(req: RequestWithUser, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const setup = await userService.createOtpSetup(req.user.user_uuid);
+      res.status(200).json(setup);
+    } catch (err: any) {
+      const statusCode = err.statusCode || 500;
+      const message = err.message || 'Internal server error';
+      res.status(statusCode).json({ error: message });
+    }
+  }
+
+  async enableOtp(req: RequestWithUser, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const code = typeof req.body.code === 'string' ? req.body.code.trim() : '';
+      if (!code) {
+        res.status(400).json({ error: 'OTP code is required' });
+        return;
+      }
+
+      await userService.enableOtp(req.user.user_uuid, code);
+      res.status(200).json({ message: 'OTP enabled successfully' });
+    } catch (err: any) {
+      const statusCode = err.statusCode || 500;
+      const message = err.message || 'Internal server error';
+      res.status(statusCode).json({ error: message });
+    }
+  }
+
+  async disableOtp(req: RequestWithUser, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const code = typeof req.body.code === 'string' ? req.body.code.trim() : '';
+      if (!code) {
+        res.status(400).json({ error: 'OTP code is required' });
+        return;
+      }
+
+      await userService.disableOtp(req.user.user_uuid, code);
+      res.status(200).json({ message: 'OTP disabled successfully' });
+    } catch (err: any) {
+      const statusCode = err.statusCode || 500;
+      const message = err.message || 'Internal server error';
+      res.status(statusCode).json({ error: message });
     }
   }
 }
