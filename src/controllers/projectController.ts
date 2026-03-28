@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import {
   RequestWithUser,
   CreateProjectRequest,
@@ -148,6 +148,19 @@ export class ProjectController {
       await projectService.deleteProject(req.user.user_uuid, req.params.project_uuid);
 
       res.status(204).send();
+    } catch (err: any) {
+      const statusCode = err.statusCode || 500;
+      const message = err.message || 'Internal server error';
+      res.status(statusCode).json({ error: message });
+    }
+  }
+
+  async getPublicFeed(req: Request, res: Response): Promise<void> {
+    try {
+      const limit = parseInt(req.query.limit as string, 10) || 10;
+      const projects = await projectService.getPublicFeed(limit);
+
+      res.status(200).json({ projects });
     } catch (err: any) {
       const statusCode = err.statusCode || 500;
       const message = err.message || 'Internal server error';

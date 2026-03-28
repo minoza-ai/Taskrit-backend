@@ -41,6 +41,14 @@ export class ProjectService {
     return projects.map((project) => this.formatProject(project));
   }
 
+  async getPublicFeed(limit: number = 10): Promise<IProject[]> {
+    const projects = await Project.find({
+      deleted_at: null,
+    }).sort({ created_at: -1 }).limit(limit);
+
+    return projects.map((project) => this.formatProject(project));
+  }
+
   async getProjectByUuid(ownerUserUuid: string, projectUuid: string): Promise<IProject | null> {
     const project = await Project.findOne({
       project_uuid: projectUuid,
