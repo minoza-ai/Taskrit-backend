@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Project } from '../models/Project';
+import { User } from '../models/User';
 import { Project as IProject, CreateProjectRequest, UpdateProjectRequest } from '../types';
 
 export class ProjectService {
@@ -47,6 +48,31 @@ export class ProjectService {
     }).sort({ created_at: -1 }).limit(limit);
 
     return projects.map((project) => this.formatProject(project));
+  }
+
+  async getMetrics(): Promise<{
+    activeProjects: number;
+    thisWeekMatches: number;
+    activeMembers: number;
+    totalCompleted: number;
+  }> {
+    const now = Math.floor(Date.now() / 1000);
+    const oneWeekAgo = now - 7 * 24 * 60 * 60;
+
+    const activeProjects = await Project.countDocuments({ deleted_at: null });
+    const thisWeekMatches = await Project.countDocuments({
+      deleted_at: null,
+      updated_at: { $gte: oneWeekAgo },
+    });
+    const activeMembers = await User.countDocuments({ deleted_at: null });
+    const totalCompleted = await Project.countDocuments({ deleted_at: { $ne: null } });
+
+    return {
+      activeProjects,
+      thisWeekMatches,
+      activeMembers,
+      totalCompleted,
+    };
   }
 
   async getProjectByUuid(ownerUserUuid: string, projectUuid: string): Promise<IProject | null> {

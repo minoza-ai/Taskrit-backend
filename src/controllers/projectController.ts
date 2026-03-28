@@ -167,6 +167,18 @@ export class ProjectController {
       res.status(statusCode).json({ error: message });
     }
   }
+
+  async getMetrics(req: Request, res: Response): Promise<void> {
+    try {
+      const metrics = await projectService.getMetrics();
+
+      res.status(200).json(metrics);
+    } catch (err: any) {
+      const statusCode = err.statusCode || 500;
+      const message = err.message || 'Internal server error';
+      res.status(statusCode).json({ error: message });
+    }
+  }
 }
 
 export const projectController = new ProjectController();
