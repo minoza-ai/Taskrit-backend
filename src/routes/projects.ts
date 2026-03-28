@@ -4,6 +4,7 @@ import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
 
+router.post('/match/suggest', authMiddleware, (req, res) => projectController.suggestMatches(req, res));
 router.post('/', authMiddleware, (req, res) => projectController.create(req, res));
 router.get('/', authMiddleware, (req, res) => projectController.list(req, res));
 router.get('/:project_uuid', authMiddleware, (req, res) => projectController.getByUuid(req, res));

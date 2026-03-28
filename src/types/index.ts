@@ -104,6 +104,30 @@ export interface UpdateProjectRequest {
   description?: string;
 }
 
+export interface TeamingMatchSuggestRequest {
+  request: string;
+  requiredDate?: number;
+  requiredElo?: number;
+  requiredCost?: number;
+  requireHuman?: boolean;
+  maxCost?: number;
+}
+
+export interface TeamingMatchCandidate {
+  accountId: string;
+  accountType: string;
+  abilityText: string;
+  similarity: number;
+  score: number;
+  linkedAssetId?: string | null;
+}
+
+export interface TeamingMatchResult {
+  taskId: string;
+  requiredAbility: string;
+  candidates: TeamingMatchCandidate[];
+}
+
 export interface RequestWithUser extends Request {
   user?: JWTPayload;
 }

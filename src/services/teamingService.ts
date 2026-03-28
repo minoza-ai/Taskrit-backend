@@ -1,0 +1,115 @@
+import crypto from 'crypto';
+import http from 'http';
+import https from 'https';
+import { URL } from 'url';
+import { TeamingMatchResult, TeamingMatchSuggestRequest } from '../types';
+
+interface TeamingTaskCreateBody {
+  accountId: string;
+  request: string;
+  requiredDate: number;
+  requiredElo: number;
+  requiredCost: number;
+  requireHuman: boolean;
+  maxCost: number;
+  hmac: string;
+}
+
+function generateHmac(targetId: string, key: string): string {
+  return crypto.createHmac('sha256', key).update(targetId).digest('hex');
+}
+
+function postJson<T>(baseUrl: string, path: string, payload: unknown): Promise<T> {
+  return new Promise((resolve, reject) => {
+    let url: URL;
+    try {
+      url = new URL(path, baseUrl);
+    } catch {
+      reject(new Error('Invalid Teaming service URL'));
+      return;
+    }
+
+    const data = JSON.stringify(payload);
+    const transport = url.protocol === 'https:' ? https : http;
+
+    const req = transport.request(
+      {
+        method: 'POST',
+        protocol: url.protocol,
+        hostname: url.hostname,
+        port: url.port,
+        path: `${url.pathname}${url.search}`,
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(data),
+        },
+      },
+      (res) => {
+        let body = '';
+
+        res.on('data', (chunk) => {
+          body += chunk;
+        });
+
+        res.on('end', () => {
+          const statusCode = res.statusCode || 500;
+          let parsed: any = null;
+          if (body) {
+            try {
+              parsed = JSON.parse(body);
+            } catch {
+              parsed = { error: body };
+            }
+          }
+
+          if (statusCode < 200 || statusCode >= 300) {
+            const error = new Error(parsed?.detail || parsed?.error || `Teaming request failed: ${statusCode}`);
+            (error as any).statusCode = statusCode;
+            reject(error);
+            return;
+          }
+
+          resolve(parsed as T);
+        });
+      },
+    );
+
+    req.on('error', (err) => reject(err));
+    req.write(data);
+    req.end();
+  });
+}
+
+class TeamingService {
+  private readonly baseUrl: string;
+
+  private readonly hmacKey: string;
+
+  constructor() {
+    this.baseUrl = process.env.TEAMING_API_BASE || 'http://localhost:3002';
+    this.hmacKey = process.env.TEAMING_HMAC_KEY || process.env.HMAC_KEY || '';
+  }
+
+  async suggestMatches(accountId: string, payload: TeamingMatchSuggestRequest): Promise<TeamingMatchResult[]> {
+    if (!this.hmacKey) {
+      const error = new Error('Teaming HMAC key is not configured');
+      (error as any).statusCode = 500;
+      throw error;
+    }
+
+    const body: TeamingTaskCreateBody = {
+      accountId,
+      request: payload.request,
+      requiredDate: payload.requiredDate ?? 0,
+      requiredElo: payload.requiredElo ?? 0,
+      requiredCost: payload.requiredCost ?? 0,
+      requireHuman: payload.requireHuman ?? false,
+      maxCost: payload.maxCost ?? 0,
+      hmac: generateHmac(accountId, this.hmacKey),
+    };
+
+    return postJson<TeamingMatchResult[]>(this.baseUrl, '/Task', body);
+  }
+}
+
+export const teamingService = new TeamingService();
