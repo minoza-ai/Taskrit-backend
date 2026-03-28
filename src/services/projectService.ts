@@ -185,6 +185,33 @@ export class ProjectService {
     }
   }
 
+  async getOngoingProjectsCount(ownerUserUuid: string): Promise<number> {
+    const count = await Project.countDocuments({
+      owner_user_uuid: ownerUserUuid,
+      deleted_at: null,
+    });
+
+    return count;
+  }
+
+  async getCompletedProjectsCount(ownerUserUuid: string): Promise<number> {
+    const count = await Project.countDocuments({
+      owner_user_uuid: ownerUserUuid,
+      deleted_at: { $ne: null },
+    });
+
+    return count;
+  }
+
+  async getRecentActivities(ownerUserUuid: string, limit: number = 10): Promise<IProject[]> {
+    const projects = await Project.find({
+      owner_user_uuid: ownerUserUuid,
+      deleted_at: null,
+    }).sort({ updated_at: -1 }).limit(limit);
+
+    return projects.map((project) => this.formatProject(project));
+  }
+
   private formatProject(project: any): IProject {
     return {
       project_uuid: project.project_uuid,

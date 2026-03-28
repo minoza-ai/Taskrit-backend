@@ -179,6 +179,29 @@ export class ProjectController {
       res.status(statusCode).json({ error: message });
     }
   }
+
+  async getDashboard(req: RequestWithUser, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const ongoingCount = await projectService.getOngoingProjectsCount(req.user.user_uuid);
+      const completedCount = await projectService.getCompletedProjectsCount(req.user.user_uuid);
+      const recentActivities = await projectService.getRecentActivities(req.user.user_uuid, 10);
+
+      res.status(200).json({
+        ongoingCount,
+        completedCount,
+        recentActivities,
+      });
+    } catch (err: any) {
+      const statusCode = err.statusCode || 500;
+      const message = err.message || 'Internal server error';
+      res.status(statusCode).json({ error: message });
+    }
+  }
 }
 
 export const projectController = new ProjectController();
