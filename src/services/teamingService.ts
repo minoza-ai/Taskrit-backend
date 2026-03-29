@@ -20,12 +20,18 @@ interface TeamingAccountCreateBody {
   type: 'human';
   abilityText: string;
   cost: number;
+  skipAi?: boolean;
   hmac: string;
 }
 
 interface TeamingAccountUpdateBody {
   abilityText: string;
+  skipAi?: boolean;
   hmac: string;
+}
+
+interface UpsertHumanAccountOptions {
+  skipAi?: boolean;
 }
 
 function generateHmac(targetId: string, key: string): string {
@@ -108,7 +114,7 @@ class TeamingService {
     this.hmacKey = process.env.TEAMING_HMAC_KEY || process.env.HMAC_KEY || '';
   }
 
-  async upsertHumanAccount(accountId: string, profileBio: string): Promise<void> {
+  async upsertHumanAccount(accountId: string, profileBio: string, options?: UpsertHumanAccountOptions): Promise<void> {
     if (!this.hmacKey) {
       const error = new Error('Teaming HMAC key is not configured');
       (error as any).statusCode = 500;
@@ -120,6 +126,7 @@ class TeamingService {
 
     const updateBody: TeamingAccountUpdateBody = {
       abilityText,
+      skipAi: options?.skipAi,
       hmac,
     };
 
@@ -137,6 +144,7 @@ class TeamingService {
       type: 'human',
       abilityText,
       cost: 0,
+      skipAi: options?.skipAi,
       hmac,
     };
 

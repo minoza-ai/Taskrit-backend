@@ -3,6 +3,7 @@ import { User as IUser, SignupRequest, UpdateUserRequest } from '../types';
 import { passwordUtil } from '../utils/password';
 import { solanaUtil } from '../utils/solana';
 import { otpUtil } from '../utils/otp';
+import { teamingService } from './teamingService';
 import { v4 as uuidv4 } from 'uuid';
 
 export class UserService {
@@ -70,6 +71,13 @@ export class UserService {
       updated_at: now,
       deleted_at: null,
     });
+
+    try {
+      await teamingService.upsertHumanAccount(user_uuid, normalizedProfileBio, { skipAi: true });
+    } catch (err) {
+      await User.deleteOne({ user_uuid });
+      throw err;
+    }
 
     return this.formatUser(user);
   }
