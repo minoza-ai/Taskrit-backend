@@ -47,10 +47,16 @@ export class AuthController {
         return;
       }
 
+      if (req.body.profile_bio !== undefined && typeof req.body.profile_bio !== 'string') {
+        res.status(422).json({ error: 'profile_bio must be a string' });
+        return;
+      }
+
       const signupReq: SignupRequest = {
         user_id: sanitizedUserId,
         nickname: req.body.nickname,
         password: req.body.password,
+        profile_bio: req.body.profile_bio,
         wallet_address: req.body.wallet_address,
       };
 

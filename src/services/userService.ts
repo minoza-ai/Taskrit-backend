@@ -11,6 +11,13 @@ export class UserService {
    */
   async createUser(req: SignupRequest): Promise<IUser> {
     const sanitizedUserId = req.user_id.replace(/\s+/g, '');
+    const normalizedProfileBio = typeof req.profile_bio === 'string' ? req.profile_bio.trim() : '';
+
+    if (normalizedProfileBio.length > 500) {
+      const error = new Error('Profile bio must be 500 characters or less');
+      (error as any).statusCode = 422;
+      throw error;
+    }
 
     // 사용자 ID 중복 확인
     const existingUser = await User.findOne({ user_id: sanitizedUserId });
@@ -53,7 +60,7 @@ export class UserService {
       user_id: sanitizedUserId,
       nickname: req.nickname,
       password: hashedPassword,
-      profile_bio: '',
+      profile_bio: normalizedProfileBio,
       capabilities: [],
       wallet_address: normalizedWallet,
       otp_enabled: false,

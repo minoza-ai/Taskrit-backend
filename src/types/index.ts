@@ -55,6 +55,7 @@ export interface SignupRequest {
   user_id: string;
   nickname: string;
   password: string;
+  profile_bio?: string;
   wallet_address?: string;
 }
 
