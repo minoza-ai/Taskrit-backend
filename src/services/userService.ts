@@ -53,6 +53,8 @@ export class UserService {
       user_id: sanitizedUserId,
       nickname: req.nickname,
       password: hashedPassword,
+      profile_bio: '',
+      capabilities: [],
       wallet_address: normalizedWallet,
       otp_enabled: false,
       otp_secret: null,
@@ -105,7 +107,12 @@ export class UserService {
    * 사용자 정보 수정
    */
   async updateUser(user_uuid: string, req: UpdateUserRequest): Promise<IUser> {
-    if (!req.nickname && !req.password) {
+    if (
+      req.nickname === undefined
+      && req.password === undefined
+      && req.profile_bio === undefined
+      && req.capabilities === undefined
+    ) {
       const error = new Error('No fields to update');
       (error as any).statusCode = 400;
       throw error;
@@ -121,6 +128,49 @@ export class UserService {
 
     if (req.password) {
       update.password = await passwordUtil.hash(req.password);
+    }
+
+    if (req.profile_bio !== undefined) {
+      const normalizedBio = req.profile_bio.trim();
+      if (normalizedBio.length > 500) {
+        const error = new Error('Profile bio must be 500 characters or less');
+        (error as any).statusCode = 422;
+        throw error;
+      }
+      update.profile_bio = normalizedBio;
+    }
+
+    if (req.capabilities !== undefined) {
+      if (!Array.isArray(req.capabilities)) {
+        const error = new Error('Capabilities must be an array of strings');
+        (error as any).statusCode = 422;
+        throw error;
+      }
+
+      const dedupe = new Set<string>();
+      const normalizedCapabilities = req.capabilities
+        .map((item) => (typeof item === 'string' ? item.trim() : ''))
+        .filter((item) => item.length > 0)
+        .filter((item) => {
+          const key = item.toLowerCase();
+          if (dedupe.has(key)) return false;
+          dedupe.add(key);
+          return true;
+        });
+
+      if (normalizedCapabilities.length > 20) {
+        const error = new Error('You can set up to 20 capabilities');
+        (error as any).statusCode = 422;
+        throw error;
+      }
+
+      if (normalizedCapabilities.some((item) => item.length > 30)) {
+        const error = new Error('Each capability must be 30 characters or less');
+        (error as any).statusCode = 422;
+        throw error;
+      }
+
+      update.capabilities = normalizedCapabilities;
     }
 
     const user = await User.findOneAndUpdate(
@@ -381,6 +431,8 @@ export class UserService {
       nickname: user.nickname,
       password: user.password,
       profile_image_url: user.profile_image_url,
+      profile_bio: user.profile_bio || '',
+      capabilities: Array.isArray(user.capabilities) ? user.capabilities : [],
       wallet_address: user.wallet_address,
       otp_enabled: !!user.otp_enabled,
       otp_secret: user.otp_secret || null,

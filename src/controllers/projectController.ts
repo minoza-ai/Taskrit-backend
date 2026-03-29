@@ -7,6 +7,7 @@ import {
 } from '../types';
 import { projectService } from '../services/projectService';
 import { teamingService } from '../services/teamingService';
+import { userService } from '../services/userService';
 
 export class ProjectController {
   async suggestMatches(req: RequestWithUser, res: Response): Promise<void> {
@@ -21,6 +22,20 @@ export class ProjectController {
         res.status(400).json({ error: 'request is required' });
         return;
       }
+
+      const currentUser = await userService.getUserByUuid(req.user.user_uuid);
+      if (!currentUser) {
+        res.status(404).json({ error: 'User not found' });
+        return;
+      }
+
+      const profileBio = currentUser.profile_bio?.trim() || '';
+      if (!profileBio) {
+        res.status(400).json({ error: '프로필 소개에 기술 스택과 숙련도를 먼저 입력해주세요.' });
+        return;
+      }
+
+      await teamingService.upsertHumanAccount(currentUser.user_uuid, profileBio);
 
       const matchReq: TeamingMatchSuggestRequest = {
         request: requestText,

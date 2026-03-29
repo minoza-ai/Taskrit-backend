@@ -6,6 +6,8 @@ export interface User {
   nickname: string;
   password: string;
   profile_image_url?: string;
+  profile_bio: string;
+  capabilities: string[];
   wallet_address: string | null;
   otp_enabled: boolean;
   otp_secret: string | null;
@@ -59,6 +61,8 @@ export interface SignupRequest {
 export interface UpdateUserRequest {
   nickname?: string;
   password?: string;
+  profile_bio?: string;
+  capabilities?: string[];
 }
 
 export interface WalletConnectRequest {

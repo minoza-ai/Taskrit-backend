@@ -27,6 +27,8 @@ export class UserController {
         user_uuid: user.user_uuid,
         user_id: user.user_id,
         nickname: user.nickname,
+        profile_bio: user.profile_bio,
+        capabilities: user.capabilities,
         wallet_address: user.wallet_address,
         profile_image_url: user.profile_image_url,
         otp_enabled: user.otp_enabled,
@@ -50,6 +52,8 @@ export class UserController {
       const updateReq: UpdateUserRequest = {
         nickname: req.body.nickname,
         password: req.body.password,
+        profile_bio: typeof req.body.profile_bio === 'string' ? req.body.profile_bio : undefined,
+        capabilities: Array.isArray(req.body.capabilities) ? req.body.capabilities : undefined,
       };
 
       await userService.updateUser(req.user.user_uuid, updateReq);
@@ -125,6 +129,8 @@ export class UserController {
         user_uuid: updatedUser.user_uuid,
         user_id: updatedUser.user_id,
         nickname: updatedUser.nickname,
+        profile_bio: updatedUser.profile_bio,
+        capabilities: updatedUser.capabilities,
         wallet_address: updatedUser.wallet_address,
         profile_image_url: updatedUser.profile_image_url,
         otp_enabled: updatedUser.otp_enabled,

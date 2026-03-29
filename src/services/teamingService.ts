@@ -15,11 +15,29 @@ interface TeamingTaskCreateBody {
   hmac: string;
 }
 
+interface TeamingAccountCreateBody {
+  accountId: string;
+  type: 'human';
+  abilityText: string;
+  cost: number;
+  hmac: string;
+}
+
+interface TeamingAccountUpdateBody {
+  abilityText: string;
+  hmac: string;
+}
+
 function generateHmac(targetId: string, key: string): string {
   return crypto.createHmac('sha256', key).update(targetId).digest('hex');
 }
 
-function postJson<T>(baseUrl: string, path: string, payload: unknown): Promise<T> {
+function requestJson<T>(
+  baseUrl: string,
+  path: string,
+  method: 'POST' | 'PATCH',
+  payload: unknown,
+): Promise<T> {
   return new Promise((resolve, reject) => {
     let url: URL;
     try {
@@ -34,7 +52,7 @@ function postJson<T>(baseUrl: string, path: string, payload: unknown): Promise<T
 
     const req = transport.request(
       {
-        method: 'POST',
+        method,
         protocol: url.protocol,
         hostname: url.hostname,
         port: url.port,
@@ -90,6 +108,41 @@ class TeamingService {
     this.hmacKey = process.env.TEAMING_HMAC_KEY || process.env.HMAC_KEY || '';
   }
 
+  async upsertHumanAccount(accountId: string, profileBio: string): Promise<void> {
+    if (!this.hmacKey) {
+      const error = new Error('Teaming HMAC key is not configured');
+      (error as any).statusCode = 500;
+      throw error;
+    }
+
+    const abilityText = profileBio.trim();
+    const hmac = generateHmac(accountId, this.hmacKey);
+
+    const updateBody: TeamingAccountUpdateBody = {
+      abilityText,
+      hmac,
+    };
+
+    try {
+      await requestJson(this.baseUrl, `/Account/${encodeURIComponent(accountId)}`, 'PATCH', updateBody);
+      return;
+    } catch (err: any) {
+      if ((err as any).statusCode !== 404) {
+        throw err;
+      }
+    }
+
+    const createBody: TeamingAccountCreateBody = {
+      accountId,
+      type: 'human',
+      abilityText,
+      cost: 0,
+      hmac,
+    };
+
+    await requestJson(this.baseUrl, '/Account', 'POST', createBody);
+  }
+
   async suggestMatches(accountId: string, payload: TeamingMatchSuggestRequest): Promise<TeamingMatchResult[]> {
     if (!this.hmacKey) {
       const error = new Error('Teaming HMAC key is not configured');
@@ -108,7 +161,7 @@ class TeamingService {
       hmac: generateHmac(accountId, this.hmacKey),
     };
 
-    return postJson<TeamingMatchResult[]>(this.baseUrl, '/Task', body);
+    return requestJson<TeamingMatchResult[]>(this.baseUrl, '/Task', 'POST', body);
   }
 }
 

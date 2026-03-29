@@ -6,6 +6,8 @@ interface UserDocument extends Document {
   nickname: string;
   password: string;
   profile_image_url?: string;
+  profile_bio: string;
+  capabilities: string[];
   wallet_address: string | null;
   otp_enabled: boolean;
   otp_secret: string | null;
@@ -39,6 +41,14 @@ const userSchema = new Schema<UserDocument>(
     profile_image_url: {
       type: String,
       required: false,
+    },
+    profile_bio: {
+      type: String,
+      default: '',
+    },
+    capabilities: {
+      type: [String],
+      default: [],
     },
     wallet_address: {
       type: String,
