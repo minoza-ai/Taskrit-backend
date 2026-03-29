@@ -56,6 +56,11 @@
             "description": "비밀번호",
             "example": "Password@123"
           },
+          "profile_bio": {
+            "type": "string",
+            "description": "프로필 소개 (선택, 최대 500자)",
+            "example": "FastAPI 중급, React 상급, Solana 입문 수준으로 API 설계와 협업 중심 개발이 가능합니다."
+          },
           "wallet_address": {
             "type": "string",
             "description": "Solana 지갑 주소 (선택, base58 PublicKey)",
