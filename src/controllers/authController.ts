@@ -118,23 +118,27 @@ export class AuthController {
         return;
       }
 
-      // Rate Limiting 체크
-      const limitCheck = rateLimitUtil.checkLimit(`login:${authReq.user_id}`);
+      // Rate Limiting 체크 (로컬 개발 환경에서는 제한 없음)
+      if (process.env.NODE_ENV !== 'development') {
+        const limitCheck = rateLimitUtil.checkLimit(`login:${authReq.user_id}`);
 
-      if (!limitCheck.allowed) {
-        res.status(429).json({
-          error: 'Too many login attempts. Please try again later.',
-          lockedUntil: limitCheck.lockedUntil,
-        });
-        return;
+        if (!limitCheck.allowed) {
+          res.status(429).json({
+            error: 'Too many login attempts. Please try again later.',
+            lockedUntil: limitCheck.lockedUntil,
+          });
+          return;
+        }
       }
 
       // 사용자 인증
       const user = await userService.authenticateUser(authReq.user_id, authReq.password);
 
       if (!user) {
-        // 실패한 시도로 기록
-        rateLimitUtil.checkLimit(`login:${authReq.user_id}`);
+        // 실패한 시도로 기록 (로컬 개발 환경에서는 제한 없음)
+        if (process.env.NODE_ENV !== 'development') {
+          rateLimitUtil.checkLimit(`login:${authReq.user_id}`);
+        }
 
         res.status(401).json({ error: 'Invalid user_id or password' });
         return;
@@ -153,8 +157,10 @@ export class AuthController {
         }
       }
 
-      // 성공 시 Rate Limit 초기화
-      rateLimitUtil.reset(`login:${authReq.user_id}`);
+      // 성공 시 Rate Limit 초기화 (로컬 개발 환경에서는 제한 없음)
+      if (process.env.NODE_ENV !== 'development') {
+        rateLimitUtil.reset(`login:${authReq.user_id}`);
+      }
 
       // 토큰 생성
       const tokens = jwtUtil.generateTokens({
