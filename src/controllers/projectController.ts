@@ -31,15 +31,14 @@ export class ProjectController {
       }
 
       const profileBio = currentUser.profile_bio?.trim() || '';
-      if (!profileBio) {
-        res.status(400).json({ error: '프로필 소개에 기술 스택과 숙련도를 먼저 입력해주세요.' });
-        return;
-      }
 
-      await teamingService.upsertHumanAccount(currentUser.user_uuid, profileBio, {
-        userId: currentUser.user_id,
-        nickname: currentUser.nickname,
-      });
+      // 프로필 소개가 있는 경우에만 Teaming 계정을 최신화한다.
+      if (profileBio) {
+        await teamingService.upsertHumanAccount(currentUser.user_uuid, profileBio, {
+          userId: currentUser.user_id,
+          nickname: currentUser.nickname,
+        });
+      }
 
       const matchReq: TeamingMatchSuggestRequest = {
         request: requestText,
@@ -62,20 +61,26 @@ export class ProjectController {
       );
 
       const nicknamesByUserUuid = new Map<string, string>();
+      const matchEligibleUserUuids = new Set<string>();
       if (nonAssetAccountIds.length > 0) {
         const users = await User.find(
           { user_uuid: { $in: nonAssetAccountIds }, deleted_at: null },
-          { user_uuid: 1, nickname: 1, _id: 0 },
+          { user_uuid: 1, nickname: 1, profile_bio: 1, _id: 0 },
         ).lean();
 
         users.forEach((user) => {
           nicknamesByUserUuid.set(user.user_uuid, user.nickname);
+          if (typeof user.profile_bio === 'string' && user.profile_bio.trim()) {
+            matchEligibleUserUuids.add(user.user_uuid);
+          }
         });
       }
 
       const decoratedMatches = matches.map((match) => ({
         ...match,
-        candidates: match.candidates.map((candidate) => {
+        candidates: match.candidates
+          .filter((candidate) => candidate.accountType === 'asset' || matchEligibleUserUuids.has(candidate.accountId))
+          .map((candidate) => {
           if (candidate.accountType === 'asset') {
             return {
               ...candidate,
@@ -87,7 +92,7 @@ export class ProjectController {
             ...candidate,
             displayName: nicknamesByUserUuid.get(candidate.accountId) || candidate.accountId,
           };
-        }),
+          }),
       }));
 
       res.status(200).json({ matches: decoratedMatches });
