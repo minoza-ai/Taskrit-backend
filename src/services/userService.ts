@@ -73,7 +73,11 @@ export class UserService {
     });
 
     try {
-      await teamingService.upsertHumanAccount(user_uuid, normalizedProfileBio, { skipAi: true });
+      await teamingService.upsertHumanAccount(user_uuid, normalizedProfileBio, {
+        skipAi: true,
+        userId: sanitizedUserId,
+        nickname: req.nickname,
+      });
     } catch (err) {
       await User.deleteOne({ user_uuid });
       throw err;

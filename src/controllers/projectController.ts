@@ -8,6 +8,7 @@ import {
 import { projectService } from '../services/projectService';
 import { teamingService } from '../services/teamingService';
 import { userService } from '../services/userService';
+import { User } from '../models/User';
 
 export class ProjectController {
   async suggestMatches(req: RequestWithUser, res: Response): Promise<void> {
@@ -35,7 +36,10 @@ export class ProjectController {
         return;
       }
 
-      await teamingService.upsertHumanAccount(currentUser.user_uuid, profileBio);
+      await teamingService.upsertHumanAccount(currentUser.user_uuid, profileBio, {
+        userId: currentUser.user_id,
+        nickname: currentUser.nickname,
+      });
 
       const matchReq: TeamingMatchSuggestRequest = {
         request: requestText,
@@ -48,7 +52,45 @@ export class ProjectController {
 
       const matches = await teamingService.suggestMatches(req.user.user_uuid, matchReq);
 
-      res.status(200).json({ matches });
+      const nonAssetAccountIds = Array.from(
+        new Set(
+          matches
+            .flatMap((match) => match.candidates)
+            .filter((candidate) => candidate.accountType !== 'asset')
+            .map((candidate) => candidate.accountId),
+        ),
+      );
+
+      const nicknamesByUserUuid = new Map<string, string>();
+      if (nonAssetAccountIds.length > 0) {
+        const users = await User.find(
+          { user_uuid: { $in: nonAssetAccountIds }, deleted_at: null },
+          { user_uuid: 1, nickname: 1, _id: 0 },
+        ).lean();
+
+        users.forEach((user) => {
+          nicknamesByUserUuid.set(user.user_uuid, user.nickname);
+        });
+      }
+
+      const decoratedMatches = matches.map((match) => ({
+        ...match,
+        candidates: match.candidates.map((candidate) => {
+          if (candidate.accountType === 'asset') {
+            return {
+              ...candidate,
+              displayName: candidate.accountId,
+            };
+          }
+
+          return {
+            ...candidate,
+            displayName: nicknamesByUserUuid.get(candidate.accountId) || candidate.accountId,
+          };
+        }),
+      }));
+
+      res.status(200).json({ matches: decoratedMatches });
     } catch (err: any) {
       const statusCode = err.statusCode || 500;
       const message = err.message || 'Internal server error';

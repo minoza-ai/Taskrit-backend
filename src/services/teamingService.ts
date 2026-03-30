@@ -17,6 +17,8 @@ interface TeamingTaskCreateBody {
 
 interface TeamingAccountCreateBody {
   accountId: string;
+  userId?: string;
+  nickname?: string;
   type: 'human';
   abilityText: string;
   cost: number;
@@ -26,12 +28,16 @@ interface TeamingAccountCreateBody {
 
 interface TeamingAccountUpdateBody {
   abilityText: string;
+  userId?: string;
+  nickname?: string;
   skipAi?: boolean;
   hmac: string;
 }
 
 interface UpsertHumanAccountOptions {
   skipAi?: boolean;
+  userId?: string;
+  nickname?: string;
 }
 
 function generateHmac(targetId: string, key: string): string {
@@ -126,6 +132,8 @@ class TeamingService {
 
     const updateBody: TeamingAccountUpdateBody = {
       abilityText,
+      userId: options?.userId,
+      nickname: options?.nickname,
       skipAi: options?.skipAi,
       hmac,
     };
@@ -141,6 +149,8 @@ class TeamingService {
 
     const createBody: TeamingAccountCreateBody = {
       accountId,
+      userId: options?.userId,
+      nickname: options?.nickname,
       type: 'human',
       abilityText,
       cost: 0,
