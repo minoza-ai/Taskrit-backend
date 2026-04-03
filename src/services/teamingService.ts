@@ -117,7 +117,7 @@ class TeamingService {
 
   constructor() {
     this.baseUrl = process.env.TEAMING_API_BASE || 'http://localhost:3002';
-    this.hmacKey = process.env.TEAMING_HMAC_KEY || process.env.HMAC_KEY || '';
+    this.hmacKey = process.env.HMAC_KEY || '';
   }
 
   async upsertHumanAccount(accountId: string, profileBio: string, options?: UpsertHumanAccountOptions): Promise<void> {

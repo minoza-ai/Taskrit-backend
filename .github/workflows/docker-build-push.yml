@@ -71,6 +71,10 @@ jobs:
             echo "::error::Missing required secret: JWT_REFRESH_SECRET"
             exit 1
           fi
+          if [ -z "${{ secrets.HMAC_KEY }}" ]; then
+            echo "::error::Missing required secret: HMAC_KEY"
+            exit 1
+          fi
 
       - name: Configure SSH key
         shell: bash
@@ -120,6 +124,8 @@ jobs:
               sleep 3
             done
 
+            RUNTIME_HMAC_KEY="${{ secrets.HMAC_KEY }}"
+
             docker run -d \
               --name "${{ env.CONTAINER_NAME }}" \
               --network "taskrit-network" \
@@ -129,6 +135,8 @@ jobs:
               -e JWT_ACCESS_SECRET="${{ secrets.JWT_ACCESS_SECRET }}" \
               -e JWT_REFRESH_SECRET="${{ secrets.JWT_REFRESH_SECRET }}" \
               -e NODE_ENV=production \
+              -e HMAC_KEY="$RUNTIME_HMAC_KEY" \
+              -e TEAMING_API_BASE="${{ secrets.TEAMING_ENGINE_URL }}" \
               -e TEAMING_ENGINE_URL="${{ secrets.TEAMING_ENGINE_URL }}" \
               -v "$HOME/taskrit_data/backend/uploads:/app/uploads" \
               -p "${{ secrets.SERVER_PORT }}:${{ env.CONTAINER_PORT }}" \
