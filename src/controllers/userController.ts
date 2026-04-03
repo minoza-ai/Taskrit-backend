@@ -218,6 +218,39 @@ export class UserController {
       res.status(statusCode).json({ error: message });
     }
   }
+  
+  async reportUser(req: RequestWithUser, res: Response): Promise<void> {
+    try {
+      const reporterUuid = req.user!.user_uuid;
+      const reportedUuid = req.params.uuid;
+      const { reason = '' } = req.body;
+
+      if (reporterUuid === reportedUuid) {
+        res.status(400).json({ error: '자신을 신고할 수 없습니다.' });
+        return;
+      }
+
+      const { User } = await import('../models/User');
+      const targetUser = await User.findOne({ user_uuid: reportedUuid, deleted_at: null });
+      if (!targetUser) {
+        res.status(404).json({ error: '신고할 사용자를 찾을 수 없습니다.' });
+        return;
+      }
+
+      const { Report } = await import('../models/Report');
+      await Report.create({
+        reporter_uuid: reporterUuid,
+        reported_uuid: reportedUuid,
+        reason,
+        created_at: Date.now(),
+      });
+
+      res.status(200).json({ message: '사용자가 신고되었습니다.' });
+    } catch (error: any) {
+      console.error('Report user error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
 }
 
 export const userController = new UserController();

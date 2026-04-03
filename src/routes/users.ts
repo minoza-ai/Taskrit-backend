@@ -54,4 +54,10 @@ router.post('/me/otp/disable', authMiddleware, (req, res) => userController.disa
  */
 router.delete('/me', authMiddleware, (req, res) => userController.deleteMe(req, res));
 
+/**
+ * POST /users/:uuid/report
+ * 사용자 신고
+ */
+router.post('/:uuid/report', authMiddleware, (req, res) => userController.reportUser(req, res));
+
 export default router;
