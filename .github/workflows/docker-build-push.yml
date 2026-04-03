@@ -125,7 +125,7 @@ jobs:
               sleep 3
             done
 
-            RUNTIME_HMAC_KEY="${{ secrets.HMAC_KEY }}"
+            RUNTIME_HMAC_KEY="$(printf '%s' "${{ secrets.HMAC_KEY }}" | tr -d '\r\n')"
 
             docker run -d \
               --name "${{ env.CONTAINER_NAME }}" \

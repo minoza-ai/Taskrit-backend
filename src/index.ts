@@ -2,11 +2,16 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import crypto from 'crypto';
 import { database } from './models/database';
 
 // 환경변수 로드
 dotenv.config();
 const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads';
+const normalizedHmacKey = (process.env.HMAC_KEY || '').trim();
+const hmacFingerprint = normalizedHmacKey
+  ? crypto.createHash('sha256').update(normalizedHmacKey).digest('hex').slice(0, 12)
+  : 'unset';
 
 // 라우터 임포트
 import authRoutes from './routes/auth';
@@ -67,6 +72,7 @@ const startServer = async () => {
     app.listen(port, () => {
       console.log(`Server is running on http://localhost:${port}`);
       console.log(`Health check: http://localhost:${port}/health`);
+      console.log(`[startup] HMAC fingerprint: ${hmacFingerprint}`);
     });
   } catch (err) {
     console.error('Failed to start server:', err);
