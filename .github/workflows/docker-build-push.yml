@@ -107,6 +107,7 @@ jobs:
             docker run -d \
               --name "${{ env.MONGO_CONTAINER_NAME }}" \
               --network "taskrit-network" \
+              --network-alias "mongo" \
               --restart unless-stopped \
               -e TZ=Asia/Seoul \
               -e MONGO_INITDB_DATABASE=taskrit \
