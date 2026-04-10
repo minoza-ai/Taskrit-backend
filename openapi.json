@@ -1,18 +1,41 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Taskrit API",
-    "description": "Taskrit Backend REST API — Solana 통합 태스크 관리 서비스 (Devnet)",
-    "version": "1.0.0"
+    "title": "Taskrit Backend API",
+    "version": "1.0.0",
+    "description": "Taskrit backend REST API documentation generated from current Express routes and controller behavior."
   },
   "servers": [
     {
-      "url": "https://api.taskr.it",
-      "description": "Production"
+      "url": "http://localhost:3000",
+      "description": "Local"
     },
     {
-      "url": "http://localhost:3000",
-      "description": "Local Development"
+      "url": "https://api.taskr.it",
+      "description": "Production"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Health"
+    },
+    {
+      "name": "Auth"
+    },
+    {
+      "name": "User"
+    },
+    {
+      "name": "Wallet"
+    },
+    {
+      "name": "Project"
+    },
+    {
+      "name": "Asset"
+    },
+    {
+      "name": "Test"
     }
   ],
   "components": {
@@ -20,8 +43,7 @@
       "BearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "JWT",
-        "description": "JWT access token. `Authorization: Bearer <token>`"
+        "bearerFormat": "JWT"
       }
     },
     "schemas": {
@@ -29,13 +51,94 @@
         "type": "object",
         "properties": {
           "error": {
-            "type": "string",
-            "description": "Error message",
-            "example": "Unauthorized"
+            "type": "string"
           }
         },
         "required": [
           "error"
+        ]
+      },
+      "ErrorWithOtpRequired": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "otp_required": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "error",
+          "otp_required"
+        ]
+      },
+      "SignatureMismatchError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "properties": {
+              "requested": {
+                "type": "string"
+              },
+              "expected_message": {
+                "type": "string"
+              },
+              "tip": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "TokenResponse": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "refresh_token": {
+            "type": "string"
+          },
+          "expires_in": {
+            "type": "integer",
+            "example": 3600
+          }
+        },
+        "required": [
+          "access_token",
+          "refresh_token",
+          "expires_in"
+        ]
+      },
+      "MessageResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "RefreshTokenRequest": {
+        "type": "object",
+        "properties": {
+          "refresh_token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "refresh_token"
         ]
       },
       "SignupRequest": {
@@ -43,28 +146,21 @@
         "properties": {
           "user_id": {
             "type": "string",
-            "description": "사용자 ID (소문자, 고유값)",
-            "example": "johndoe"
+            "description": "3-32 chars, [a-zA-Z0-9_-]"
           },
           "nickname": {
-            "type": "string",
-            "description": "표시 이름",
-            "example": "John Doe"
+            "type": "string"
           },
           "password": {
-            "type": "string",
-            "description": "비밀번호",
-            "example": "Password@123"
+            "type": "string"
           },
           "profile_bio": {
             "type": "string",
-            "description": "프로필 소개 (선택, 최대 500자)",
-            "example": "FastAPI 중급, React 상급, Solana 입문 수준으로 API 설계와 협업 중심 개발이 가능합니다."
+            "maxLength": 500
           },
           "wallet_address": {
             "type": "string",
-            "description": "Solana 지갑 주소 (선택, base58 PublicKey)",
-            "example": "7kbnvuGBxxj8AG9qp8Scn56muWGaRaFqxg1FsRp3PaFT"
+            "description": "Solana wallet address"
           }
         },
         "required": [
@@ -77,12 +173,14 @@
         "type": "object",
         "properties": {
           "user_id": {
-            "type": "string",
-            "example": "johndoe"
+            "type": "string"
           },
           "password": {
+            "type": "string"
+          },
+          "otp_code": {
             "type": "string",
-            "example": "Password@123"
+            "description": "Required when OTP is enabled"
           }
         },
         "required": [
@@ -90,66 +188,130 @@
           "password"
         ]
       },
-      "TokenResponse": {
+      "UpdateUserRequest": {
         "type": "object",
         "properties": {
-          "access_token": {
-            "type": "string",
-            "description": "JWT access token (1시간 유효)"
+          "nickname": {
+            "type": "string"
           },
-          "refresh_token": {
-            "type": "string",
-            "description": "JWT refresh token (14일 유효)"
+          "password": {
+            "type": "string"
           },
-          "expires_in": {
-            "type": "integer",
-            "description": "Access token 만료 시간 (초)",
-            "example": 3600
+          "profile_bio": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 30
+            },
+            "maxItems": 20
           }
-        },
-        "required": [
-          "access_token",
-          "refresh_token",
-          "expires_in"
-        ]
+        }
       },
       "UserProfile": {
         "type": "object",
         "properties": {
           "user_uuid": {
-            "type": "string",
-            "format": "uuid",
-            "description": "사용자 고유 UUID"
+            "type": "string"
           },
           "user_id": {
-            "type": "string",
-            "description": "사용자 ID"
+            "type": "string"
           },
           "nickname": {
-            "type": "string",
-            "description": "표시 이름"
+            "type": "string"
+          },
+          "profile_bio": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "wallet_address": {
-            "type": "string",
-            "nullable": true,
-            "description": "연동된 지갑 주소"
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "profile_image_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "otp_enabled": {
+            "type": "boolean"
           },
           "created_at": {
-            "type": "integer",
-            "description": "계정 생성 Unix timestamp"
+            "type": "integer"
           }
-        }
+        },
+        "required": [
+          "user_uuid",
+          "user_id",
+          "nickname",
+          "profile_bio",
+          "capabilities",
+          "wallet_address",
+          "otp_enabled",
+          "created_at"
+        ]
       },
-      "UpdateUserRequest": {
+      "OtpStatusResponse": {
         "type": "object",
         "properties": {
-          "nickname": {
-            "type": "string",
-            "description": "새 표시 이름"
+          "otp_enabled": {
+            "type": "boolean"
           },
-          "password": {
-            "type": "string",
-            "description": "새 비밀번호"
+          "otp_pending": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "otp_enabled",
+          "otp_pending"
+        ]
+      },
+      "OtpSetupResponse": {
+        "type": "object",
+        "properties": {
+          "secret": {
+            "type": "string"
+          },
+          "otpauth_url": {
+            "type": "string"
+          },
+          "qr_code_data_url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "secret",
+          "otpauth_url",
+          "qr_code_data_url"
+        ]
+      },
+      "OtpCodeRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "ReportUserRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
           }
         }
       },
@@ -157,39 +319,53 @@
         "type": "object",
         "properties": {
           "wallet_address": {
-            "type": "string",
-            "description": "Solana 지갑 주소 (base58 PublicKey)",
-            "example": "7kbnvuGBxxj8AG9qp8Scn56muWGaRaFqxg1FsRp3PaFT"
+            "type": "string"
           }
         },
         "required": [
           "wallet_address"
         ]
       },
+      "WalletNonceResponse": {
+        "type": "object",
+        "properties": {
+          "nonce": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nonce",
+          "message"
+        ]
+      },
       "WalletConfirmRequest": {
         "type": "object",
         "properties": {
           "wallet_address": {
-            "type": "string",
-            "description": "Solana 지갑 주소 (base58 PublicKey)",
-            "example": "7kbnvuGBxxj8AG9qp8Scn56muWGaRaFqxg1FsRp3PaFT"
+            "type": "string"
           },
           "signature": {
-            "type": "string",
-            "description": "Solana signMessage(Ed25519) 서명"
+            "type": "string"
           },
           "nonce": {
-            "type": "string",
-            "description": "/wallets/connect/request에서 발급받은 Nonce"
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
           },
           "signature_encoding": {
             "type": "string",
-            "description": "signature 인코딩 형식 (생략 시 base58/base64/hex 자동 시도)",
-            "enum": ["base58", "base64", "hex"]
+            "enum": [
+              "base58",
+              "base64",
+              "hex"
+            ]
           },
-          "message": {
-            "type": "string",
-            "description": "지갑으로 실제 서명한 원문 메시지 (선택). 제공하면 해당 메시지로 우선 검증합니다."
+          "otp_code": {
+            "type": "string"
           }
         },
         "required": [
@@ -202,62 +378,55 @@
         "type": "object",
         "properties": {
           "project_uuid": {
-            "type": "string",
-            "format": "uuid",
-            "description": "프로젝트 고유 UUID"
+            "type": "string"
           },
           "owner_user_uuid": {
-            "type": "string",
-            "format": "uuid",
-            "description": "프로젝트 소유자 사용자 UUID"
+            "type": "string"
           },
           "name": {
-            "type": "string",
-            "description": "프로젝트 이름",
-            "example": "Taskrit Backend"
+            "type": "string"
           },
           "category": {
-            "type": "string",
-            "nullable": true,
-            "description": "프로젝트 카테고리",
-            "example": "Web Development"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "budget": {
-            "type": "number",
-            "nullable": true,
-            "description": "프로젝트 예산",
-            "example": 5000000
+            "type": [
+              "number",
+              "null"
+            ]
           },
           "deadline": {
-            "type": "integer",
-            "nullable": true,
-            "description": "마감일 Unix timestamp",
-            "example": 1767225600
+            "type": [
+              "integer",
+              "null"
+            ]
           },
           "team_requirements": {
-            "type": "string",
-            "nullable": true,
-            "description": "팀 구성/역할 요구사항",
-            "example": "Frontend 1명, Backend 1명, Designer 1명"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "detailed_description": {
-            "type": "string",
-            "nullable": true,
-            "description": "등록자가 자유롭게 작성하는 상세 설명",
-            "example": "MVP 단계에서는 인증/결제 흐름을 우선 구현하고 4주 내 베타 배포를 목표로 합니다."
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "created_at": {
-            "type": "integer",
-            "description": "프로젝트 생성 Unix timestamp"
+            "type": "integer"
           },
           "updated_at": {
-            "type": "integer",
-            "description": "프로젝트 수정 Unix timestamp"
+            "type": "integer"
           },
           "deleted_at": {
-            "type": "integer",
-            "nullable": true,
-            "description": "프로젝트 삭제 Unix timestamp"
+            "type": [
+              "integer",
+              "null"
+            ]
           }
         },
         "required": [
@@ -278,34 +447,28 @@
         "type": "object",
         "properties": {
           "name": {
-            "type": "string",
-            "description": "프로젝트 이름",
-            "example": "Taskrit Backend"
+            "type": "string"
           },
           "category": {
-            "type": "string",
-            "description": "프로젝트 카테고리",
-            "example": "Web Development"
+            "type": "string"
           },
           "budget": {
             "type": "number",
-            "description": "프로젝트 예산",
-            "example": 5000000
+            "minimum": 0
           },
           "deadline": {
             "type": "integer",
-            "description": "마감일 Unix timestamp",
-            "example": 1767225600
+            "minimum": 1
           },
           "team_requirements": {
-            "type": "string",
-            "description": "팀 구성/역할 요구사항",
-            "example": "Frontend 1명, Backend 1명, Designer 1명"
+            "type": "string"
           },
           "detailed_description": {
+            "type": "string"
+          },
+          "description": {
             "type": "string",
-            "description": "등록자가 자유롭게 작성하는 상세 설명",
-            "example": "MVP 단계에서는 인증/결제 흐름을 우선 구현하고 4주 내 베타 배포를 목표로 합니다."
+            "description": "Alias of detailed_description"
           }
         },
         "required": [
@@ -316,45 +479,308 @@
         "type": "object",
         "properties": {
           "name": {
-            "type": "string",
-            "description": "새 프로젝트 이름"
+            "type": "string"
           },
           "category": {
-            "type": "string",
-            "description": "새 프로젝트 카테고리"
+            "type": "string"
           },
           "budget": {
             "type": "number",
-            "description": "새 프로젝트 예산"
+            "minimum": 0
           },
           "deadline": {
             "type": "integer",
-            "description": "새 마감일 Unix timestamp"
+            "minimum": 1
           },
           "team_requirements": {
-            "type": "string",
-            "description": "새 팀 요구사항"
+            "type": "string"
           },
           "detailed_description": {
+            "type": "string"
+          },
+          "description": {
             "type": "string",
-            "description": "새 상세 설명"
+            "description": "Alias of detailed_description"
           }
         }
+      },
+      "ProjectListResponse": {
+        "type": "object",
+        "properties": {
+          "projects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Project"
+            }
+          }
+        },
+        "required": [
+          "projects"
+        ]
+      },
+      "ProjectMutationResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "project": {
+            "$ref": "#/components/schemas/Project"
+          }
+        },
+        "required": [
+          "message",
+          "project"
+        ]
+      },
+      "ProjectMetrics": {
+        "type": "object",
+        "properties": {
+          "activeProjects": {
+            "type": "integer"
+          },
+          "thisWeekMatches": {
+            "type": "integer"
+          },
+          "activeMembers": {
+            "type": "integer"
+          },
+          "totalCompleted": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "activeProjects",
+          "thisWeekMatches",
+          "activeMembers",
+          "totalCompleted"
+        ]
+      },
+      "ProjectDashboard": {
+        "type": "object",
+        "properties": {
+          "ongoingCount": {
+            "type": "integer"
+          },
+          "completedCount": {
+            "type": "integer"
+          },
+          "recentActivities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Project"
+            }
+          }
+        },
+        "required": [
+          "ongoingCount",
+          "completedCount",
+          "recentActivities"
+        ]
+      },
+      "MatchSuggestRequest": {
+        "type": "object",
+        "properties": {
+          "request": {
+            "type": "string"
+          },
+          "requiredDate": {
+            "type": "integer"
+          },
+          "requiredElo": {
+            "type": "number"
+          },
+          "requiredCost": {
+            "type": "number"
+          },
+          "requireHuman": {
+            "type": "boolean"
+          },
+          "maxCost": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "request"
+        ]
+      },
+      "MatchCandidate": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "accountType": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "abilityText": {
+            "type": "string"
+          },
+          "similarity": {
+            "type": "number"
+          },
+          "score": {
+            "type": "number"
+          },
+          "linkedAssetId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "accountId",
+          "accountType",
+          "abilityText",
+          "similarity",
+          "score"
+        ]
+      },
+      "MatchResult": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string"
+          },
+          "requiredAbility": {
+            "type": "string"
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MatchCandidate"
+            }
+          }
+        },
+        "required": [
+          "taskId",
+          "requiredAbility",
+          "candidates"
+        ]
+      },
+      "MatchSuggestResponse": {
+        "type": "object",
+        "properties": {
+          "matches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MatchResult"
+            }
+          }
+        },
+        "required": [
+          "matches"
+        ]
+      },
+      "Asset": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "asset_uuid": {
+            "type": "string"
+          },
+          "owner_user_uuid": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "file_url": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "asset_uuid",
+          "owner_user_uuid",
+          "name",
+          "description",
+          "file_url",
+          "created_at"
+        ]
+      },
+      "AssetCreateMultipart": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string",
+            "format": "binary"
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "file"
+        ]
+      },
+      "ProfileImageUploadMultipart": {
+        "type": "object",
+        "properties": {
+          "profile_image": {
+            "type": "string",
+            "format": "binary"
+          }
+        },
+        "required": [
+          "profile_image"
+        ]
+      },
+      "HashPasswordRequest": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ]
+      },
+      "HashPasswordResponse": {
+        "type": "object",
+        "properties": {
+          "hashed_password": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "hashed_password",
+          "message"
+        ]
       }
     }
   },
   "paths": {
     "/health": {
       "get": {
-        "summary": "Health Check",
-        "description": "API 서버 실행 상태를 확인합니다.",
-        "operationId": "healthCheck",
         "tags": [
           "Health"
         ],
+        "summary": "Health check",
         "responses": {
           "200": {
-            "description": "Server is running",
+            "description": "Server status",
             "content": {
               "application/json": {
                 "schema": {
@@ -364,7 +790,10 @@
                       "type": "string",
                       "example": "ok"
                     }
-                  }
+                  },
+                  "required": [
+                    "status"
+                  ]
                 }
               }
             }
@@ -374,12 +803,10 @@
     },
     "/user/register": {
       "post": {
-        "summary": "회원가입",
-        "description": "새로운 사용자 계정을 생성합니다.",
-        "operationId": "register",
         "tags": [
-          "User"
+          "Auth"
         ],
+        "summary": "Register",
         "requestBody": {
           "required": true,
           "content": {
@@ -392,7 +819,7 @@
         },
         "responses": {
           "201": {
-            "description": "User created successfully",
+            "description": "Created",
             "content": {
               "application/json": {
                 "schema": {
@@ -403,16 +830,19 @@
                       "example": "User created successfully"
                     },
                     "user_uuid": {
-                      "type": "string",
-                      "format": "uuid"
+                      "type": "string"
                     }
-                  }
+                  },
+                  "required": [
+                    "message",
+                    "user_uuid"
+                  ]
                 }
               }
             }
           },
           "400": {
-            "description": "필수 필드 누락",
+            "description": "Invalid request",
             "content": {
               "application/json": {
                 "schema": {
@@ -422,7 +852,17 @@
             }
           },
           "409": {
-            "description": "이미 사용중인 user_id 또는 wallet_address",
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
             "content": {
               "application/json": {
                 "schema": {
@@ -436,12 +876,10 @@
     },
     "/user/login": {
       "post": {
-        "summary": "로그인",
-        "description": "user_id와 비밀번호로 로그인합니다. 15분 내 5회 실패 시 10분간 잠금됩니다.",
-        "operationId": "login",
         "tags": [
-          "User"
+          "Auth"
         ],
+        "summary": "Login",
         "requestBody": {
           "required": true,
           "content": {
@@ -454,7 +892,7 @@
         },
         "responses": {
           "200": {
-            "description": "Login successful",
+            "description": "Success",
             "content": {
               "application/json": {
                 "schema": {
@@ -464,7 +902,7 @@
             }
           },
           "400": {
-            "description": "필수 필드 누락",
+            "description": "Invalid request",
             "content": {
               "application/json": {
                 "schema": {
@@ -474,7 +912,24 @@
             }
           },
           "401": {
-            "description": "잘못된 인증 정보",
+            "description": "Invalid credentials or OTP required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorWithOtpRequired"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
             "content": {
               "application/json": {
                 "schema": {
@@ -484,21 +939,22 @@
             }
           },
           "429": {
-            "description": "로그인 시도 횟수 초과",
+            "description": "Too many attempts",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "error": {
-                      "type": "string",
-                      "example": "Too many login attempts. Please try again later."
+                      "type": "string"
                     },
                     "lockedUntil": {
-                      "type": "integer",
-                      "description": "잠금 해제 Unix timestamp"
+                      "type": "integer"
                     }
-                  }
+                  },
+                  "required": [
+                    "error"
+                  ]
                 }
               }
             }
@@ -508,34 +964,23 @@
     },
     "/user/refresh": {
       "post": {
-        "summary": "토큰 갱신",
-        "description": "Refresh token으로 새 access token과 refresh token을 발급받습니다.",
-        "operationId": "refreshToken",
         "tags": [
-          "User"
+          "Auth"
         ],
+        "summary": "Refresh token",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "refresh_token": {
-                    "type": "string",
-                    "description": "JWT refresh token"
-                  }
-                },
-                "required": [
-                  "refresh_token"
-                ]
+                "$ref": "#/components/schemas/RefreshTokenRequest"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Token refreshed",
+            "description": "Success",
             "content": {
               "application/json": {
                 "schema": {
@@ -545,7 +990,7 @@
             }
           },
           "400": {
-            "description": "refresh_token 누락",
+            "description": "Invalid request",
             "content": {
               "application/json": {
                 "schema": {
@@ -555,7 +1000,7 @@
             }
           },
           "401": {
-            "description": "유효하지 않거나 만료된 refresh token",
+            "description": "Invalid refresh token",
             "content": {
               "application/json": {
                 "schema": {
@@ -569,12 +1014,10 @@
     },
     "/user/me": {
       "get": {
-        "summary": "내 정보 조회",
-        "description": "현재 로그인된 사용자의 프로필을 반환합니다.",
-        "operationId": "getMe",
         "tags": [
           "User"
         ],
+        "summary": "Get current user",
         "security": [
           {
             "BearerAuth": []
@@ -614,12 +1057,10 @@
         }
       },
       "patch": {
-        "summary": "내 정보 수정",
-        "description": "닉네임 또는 비밀번호를 수정합니다.",
-        "operationId": "updateMe",
         "tags": [
           "User"
         ],
+        "summary": "Update current user",
         "security": [
           {
             "BearerAuth": []
@@ -637,23 +1078,17 @@
         },
         "responses": {
           "200": {
-            "description": "User updated",
+            "description": "Updated",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "example": "User updated successfully"
-                    }
-                  }
+                  "$ref": "#/components/schemas/MessageResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "수정할 필드 없음",
+            "description": "Invalid request",
             "content": {
               "application/json": {
                 "schema": {
@@ -671,16 +1106,34 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       },
       "delete": {
-        "summary": "회원 탈퇴",
-        "description": "계정을 소프트 딜리트합니다. 삭제된 계정은 복구되지 않습니다.",
-        "operationId": "deleteMe",
         "tags": [
           "User"
         ],
+        "summary": "Delete current user",
         "security": [
           {
             "BearerAuth": []
@@ -688,23 +1141,17 @@
         ],
         "responses": {
           "200": {
-            "description": "User deleted successfully",
+            "description": "Deleted",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "example": "User account deleted successfully"
-                    }
-                  }
+                  "$ref": "#/components/schemas/MessageResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "이미 탈퇴된 계정",
+            "description": "Already deleted",
             "content": {
               "application/json": {
                 "schema": {
@@ -736,14 +1183,373 @@
         }
       }
     },
+    "/user/me/profile-image": {
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Upload profile image",
+        "description": "Accepts an image file in profile_image field. Max 10MB.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileImageUploadMultipart"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/me/otp/status": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Get OTP status",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OtpStatusResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/me/otp/setup": {
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Initialize OTP setup",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OTP setup payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OtpSetupResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/me/otp/enable": {
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Enable OTP",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OtpCodeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid setup state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized or invalid OTP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/me/otp/disable": {
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Disable OTP",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OtpCodeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "OTP not enabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized or invalid OTP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/{uuid}/report": {
+      "post": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Report user",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid report request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Target user not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/wallets/connect/request": {
       "post": {
-        "summary": "지갑 연동 요청 (Nonce 발급)",
-        "description": "지갑 서명 검증에 사용할 Nonce를 발급합니다. Nonce는 15분간 유효합니다.",
-        "operationId": "walletConnectRequest",
         "tags": [
           "Wallet"
         ],
+        "summary": "Issue wallet nonce",
         "requestBody": {
           "required": true,
           "content": {
@@ -760,23 +1566,13 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "nonce": {
-                      "type": "string",
-                      "description": "서명할 32바이트 hex Nonce"
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "Taskrit Wallet Verification\nNetwork: solana-devnet\nWallet: <wallet>\nNonce: <nonce>"
-                    }
-                  }
+                  "$ref": "#/components/schemas/WalletNonceResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "wallet_address 누락",
+            "description": "Invalid request",
             "content": {
               "application/json": {
                 "schema": {
@@ -786,7 +1582,7 @@
             }
           },
           "422": {
-            "description": "유효하지 않은 지갑 주소",
+            "description": "Invalid wallet address",
             "content": {
               "application/json": {
                 "schema": {
@@ -800,12 +1596,11 @@
     },
     "/wallets/connect/confirm": {
       "post": {
-        "summary": "지갑 연동 완료 (Signature 검증)",
-        "description": "Solana signMessage(Ed25519) 서명을 검증하고 지갑을 계정에 연동합니다.",
-        "operationId": "walletConnectConfirm",
         "tags": [
           "Wallet"
         ],
+        "summary": "Confirm wallet link",
+        "description": "Requires access token. optionalAuth middleware exists but controller enforces logged-in user.",
         "security": [
           {
             "BearerAuth": []
@@ -823,23 +1618,17 @@
         },
         "responses": {
           "200": {
-            "description": "Wallet connected successfully",
+            "description": "Linked",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "example": "Wallet connected successfully"
-                    }
-                  }
+                  "$ref": "#/components/schemas/MessageResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "필드 누락 또는 유효하지 않은 Nonce",
+            "description": "Invalid nonce or bad payload",
             "content": {
               "application/json": {
                 "schema": {
@@ -849,17 +1638,24 @@
             }
           },
           "401": {
-            "description": "Unauthorized 또는 서명 검증 실패",
+            "description": "Unauthorized or signature mismatch",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SignatureMismatchError"
+                    }
+                  ]
                 }
               }
             }
           },
           "409": {
-            "description": "이미 다른 계정에 연동된 지갑",
+            "description": "Wallet already linked",
             "content": {
               "application/json": {
                 "schema": {
@@ -869,7 +1665,87 @@
             }
           },
           "422": {
-            "description": "유효하지 않은 지갑 주소",
+            "description": "Invalid wallet address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/wallets/login/confirm": {
+      "post": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "Login with wallet signature",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WalletConfirmRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid nonce or bad payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid signature or OTP failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ErrorWithOtpRequired"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SignatureMismatchError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No linked account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid wallet address",
             "content": {
               "application/json": {
                 "schema": {
@@ -883,12 +1759,10 @@
     },
     "/wallets": {
       "delete": {
-        "summary": "지갑 연동 해제",
-        "description": "현재 계정에 연동된 지갑을 해제합니다.",
-        "operationId": "walletDisconnect",
         "tags": [
           "Wallet"
         ],
+        "summary": "Disconnect wallet",
         "security": [
           {
             "BearerAuth": []
@@ -896,7 +1770,7 @@
         ],
         "responses": {
           "204": {
-            "description": "Wallet disconnected successfully"
+            "description": "Disconnected"
           },
           "401": {
             "description": "Unauthorized",
@@ -911,14 +1785,183 @@
         }
       }
     },
-    "/projects": {
-      "post": {
-        "summary": "프로젝트 등록",
-        "description": "현재 로그인된 사용자에게 새 프로젝트를 등록합니다.",
-        "operationId": "createProject",
+    "/projects/feed": {
+      "get": {
         "tags": [
           "Project"
         ],
+        "summary": "Get public project feed",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Feed list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectListResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/public/metrics": {
+      "get": {
+        "tags": [
+          "Project"
+        ],
+        "summary": "Get public project metrics",
+        "responses": {
+          "200": {
+            "description": "Metrics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectMetrics"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/dashboard": {
+      "get": {
+        "tags": [
+          "Project"
+        ],
+        "summary": "Get user dashboard stats",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dashboard",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDashboard"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/match/suggest": {
+      "post": {
+        "tags": [
+          "Project"
+        ],
+        "summary": "Suggest teammate/asset matches",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatchSuggestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Match result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchSuggestResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects": {
+      "post": {
+        "tags": [
+          "Project"
+        ],
+        "summary": "Create project",
         "security": [
           {
             "BearerAuth": []
@@ -936,30 +1979,17 @@
         },
         "responses": {
           "201": {
-            "description": "Project created",
+            "description": "Created",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "example": "Project created successfully"
-                    },
-                    "project": {
-                      "$ref": "#/components/schemas/Project"
-                    }
-                  },
-                  "required": [
-                    "message",
-                    "project"
-                  ]
+                  "$ref": "#/components/schemas/ProjectMutationResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "name 누락 또는 잘못된 요청",
+            "description": "Validation error",
             "content": {
               "application/json": {
                 "schema": {
@@ -981,12 +2011,10 @@
         }
       },
       "get": {
-        "summary": "프로젝트 목록 조회",
-        "description": "현재 로그인된 사용자의 프로젝트 목록을 조회합니다.",
-        "operationId": "listProjects",
         "tags": [
           "Project"
         ],
+        "summary": "List my projects",
         "security": [
           {
             "BearerAuth": []
@@ -994,22 +2022,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Project list",
+            "description": "List",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "projects": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Project"
-                      }
-                    }
-                  },
-                  "required": [
-                    "projects"
-                  ]
+                  "$ref": "#/components/schemas/ProjectListResponse"
                 }
               }
             }
@@ -1029,12 +2046,10 @@
     },
     "/projects/{project_uuid}": {
       "get": {
-        "summary": "프로젝트 상세 조회",
-        "description": "현재 로그인된 사용자의 특정 프로젝트를 조회합니다.",
-        "operationId": "getProjectByUuid",
         "tags": [
           "Project"
         ],
+        "summary": "Get my project by UUID",
         "security": [
           {
             "BearerAuth": []
@@ -1046,14 +2061,13 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Project detail",
+            "description": "Project",
             "content": {
               "application/json": {
                 "schema": {
@@ -1073,7 +2087,7 @@
             }
           },
           "404": {
-            "description": "Project not found",
+            "description": "Not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1085,12 +2099,10 @@
         }
       },
       "patch": {
-        "summary": "프로젝트 수정",
-        "description": "현재 로그인된 사용자의 프로젝트 이름/카테고리/예산/마감일/팀 요구사항/상세 설명을 수정합니다.",
-        "operationId": "updateProject",
         "tags": [
           "Project"
         ],
+        "summary": "Update project",
         "security": [
           {
             "BearerAuth": []
@@ -1102,8 +2114,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "type": "string"
             }
           }
         ],
@@ -1119,30 +2130,17 @@
         },
         "responses": {
           "200": {
-            "description": "Project updated",
+            "description": "Updated",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "example": "Project updated successfully"
-                    },
-                    "project": {
-                      "$ref": "#/components/schemas/Project"
-                    }
-                  },
-                  "required": [
-                    "message",
-                    "project"
-                  ]
+                  "$ref": "#/components/schemas/ProjectMutationResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "수정할 필드 없음 또는 잘못된 값",
+            "description": "Validation error",
             "content": {
               "application/json": {
                 "schema": {
@@ -1162,7 +2160,7 @@
             }
           },
           "404": {
-            "description": "Project not found",
+            "description": "Not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1174,12 +2172,10 @@
         }
       },
       "delete": {
-        "summary": "프로젝트 삭제",
-        "description": "현재 로그인된 사용자의 프로젝트를 소프트 삭제합니다.",
-        "operationId": "deleteProject",
         "tags": [
           "Project"
         ],
+        "summary": "Delete project",
         "security": [
           {
             "BearerAuth": []
@@ -1191,14 +2187,13 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "type": "string"
             }
           }
         ],
         "responses": {
           "204": {
-            "description": "Project deleted successfully"
+            "description": "Deleted"
           },
           "401": {
             "description": "Unauthorized",
@@ -1211,7 +2206,240 @@
             }
           },
           "404": {
-            "description": "Project not found",
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/assets": {
+      "post": {
+        "tags": [
+          "Asset"
+        ],
+        "summary": "Create asset",
+        "description": "Multipart upload. Max file size 50MB.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetCreateMultipart"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Asset"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No file or missing fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/assets/my": {
+      "get": {
+        "tags": [
+          "Asset"
+        ],
+        "summary": "List my assets",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Asset list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Asset"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/assets/{asset_uuid}": {
+      "delete": {
+        "tags": [
+          "Asset"
+        ],
+        "summary": "Delete asset",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "asset_uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/hash-password": {
+      "post": {
+        "tags": [
+          "Test"
+        ],
+        "summary": "Hash password for local testing",
+        "description": "Blocked in production environment.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HashPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Hashed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HashPasswordResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing password",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Disabled in production",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
             "content": {
               "application/json": {
                 "schema": {
