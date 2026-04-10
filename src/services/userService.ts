@@ -74,7 +74,6 @@ export class UserService {
 
     try {
       await teamingService.upsertHumanAccount(user_uuid, normalizedProfileBio, {
-        skipAi: true,
         userId: sanitizedUserId,
         nickname: req.nickname,
       });
