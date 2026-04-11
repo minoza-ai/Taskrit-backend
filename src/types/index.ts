@@ -89,6 +89,33 @@ export interface Project {
   deleted_at: number | null;
 }
 
+export type ProjectSubmissionStatus = 'submitted' | 'approved' | 'rejected';
+
+export interface ProjectSubmission {
+  submission_uuid: string;
+  project_uuid: string;
+  submitter_user_uuid: string;
+  title: string;
+  description: string | null;
+  artifact_url: string | null;
+  status: ProjectSubmissionStatus;
+  settlement_amount: number | null;
+  settlement_signature: string | null;
+  created_at: number;
+  updated_at: number;
+  settled_at: number | null;
+}
+
+export interface CreateProjectSubmissionRequest {
+  title: string;
+  description?: string;
+  artifact_url?: string;
+}
+
+export interface ApproveProjectSubmissionRequest {
+  settlement_amount?: number;
+}
+
 export interface CreateProjectRequest {
   name: string;
   category?: string;

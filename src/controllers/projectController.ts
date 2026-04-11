@@ -1,13 +1,17 @@
 import { Response, Request } from 'express';
+import fs from 'fs/promises';
+import path from 'path';
 import {
   RequestWithUser,
   CreateProjectRequest,
   UpdateProjectRequest,
   TeamingMatchSuggestRequest,
+  CreateProjectSubmissionRequest,
 } from '../types';
 import { projectService } from '../services/projectService';
 import { teamingService } from '../services/teamingService';
 import { userService } from '../services/userService';
+import { Project } from '../models/Project';
 import { User } from '../models/User';
 
 export class ProjectController {
@@ -210,6 +214,143 @@ export class ProjectController {
       await projectService.deleteProject(req.user.user_uuid, req.params.project_uuid);
 
       res.status(204).send();
+    } catch (err: any) {
+      const statusCode = err.statusCode || 500;
+      const message = err.message || 'Internal server error';
+      res.status(statusCode).json({ error: message });
+    }
+  }
+
+  async submitResult(req: RequestWithUser, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const submitReq: CreateProjectSubmissionRequest = {
+        title: req.body.title,
+        description: req.body.description,
+        artifact_url: req.body.artifact_url,
+      };
+
+      const submission = await projectService.submitProjectResult(
+        req.user.user_uuid,
+        req.params.project_uuid,
+        submitReq,
+      );
+
+      res.status(201).json({
+        message: 'Result submitted successfully',
+        submission,
+      });
+    } catch (err: any) {
+      const statusCode = err.statusCode || 500;
+      const message = err.message || 'Internal server error';
+      res.status(statusCode).json({ error: message });
+    }
+  }
+
+  async uploadSubmissionFile(req: RequestWithUser, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      if (!req.file) {
+        res.status(400).json({ error: 'No file uploaded' });
+        return;
+      }
+
+      const project = await Project.findOne({ project_uuid: req.params.project_uuid, deleted_at: null });
+      if (!project) {
+        res.status(404).json({ error: 'Project not found' });
+        return;
+      }
+
+      const uploadDir = path.join(process.cwd(), process.env.UPLOAD_DIR || 'uploads', 'submissions');
+      await fs.mkdir(uploadDir, { recursive: true });
+
+      const originalName = req.file.originalname || 'artifact';
+      const ext = path.extname(originalName);
+      const baseName = path.basename(originalName, ext).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80) || 'artifact';
+      const filename = `${Date.now()}-${baseName}${ext}`;
+      const filePath = path.join(uploadDir, filename);
+
+      await fs.writeFile(filePath, req.file.buffer);
+
+      const artifactUrl = `/uploads/submissions/${filename}`;
+
+      res.status(201).json({
+        message: 'Submission artifact uploaded successfully',
+        artifact_url: artifactUrl,
+        original_filename: originalName,
+        size: req.file.size,
+      });
+    } catch (err: any) {
+      const statusCode = err.statusCode || 500;
+      const message = err.message || 'Internal server error';
+      res.status(statusCode).json({ error: message });
+    }
+  }
+
+  async listSubmissions(req: RequestWithUser, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const submissions = await projectService.listProjectSubmissions(req.user.user_uuid, req.params.project_uuid);
+
+      res.status(200).json({ submissions });
+    } catch (err: any) {
+      const statusCode = err.statusCode || 500;
+      const message = err.message || 'Internal server error';
+      res.status(statusCode).json({ error: message });
+    }
+  }
+
+  async approveSubmission(req: RequestWithUser, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const rawSettlementAmount = req.body.settlement_amount;
+      let settlementAmount: number | undefined;
+
+      if (rawSettlementAmount !== undefined) {
+        const parsed = typeof rawSettlementAmount === 'number'
+          ? rawSettlementAmount
+          : Number(rawSettlementAmount);
+
+        if (!Number.isFinite(parsed) || parsed <= 0) {
+          res.status(400).json({ error: 'settlement_amount must be a positive number' });
+          return;
+        }
+
+        settlementAmount = parsed;
+      }
+
+      const approved = await projectService.approveProjectSubmission(
+        req.user.user_uuid,
+        req.params.project_uuid,
+        req.params.submission_uuid,
+        settlementAmount,
+      );
+
+      res.status(200).json({
+        message: 'Submission approved and settlement completed',
+        project: approved.project,
+        submission: approved.submission,
+        settlement: {
+          amount: approved.settlementAmount,
+          signature: approved.settlementSignature,
+        },
+      });
     } catch (err: any) {
       const statusCode = err.statusCode || 500;
       const message = err.message || 'Internal server error';
